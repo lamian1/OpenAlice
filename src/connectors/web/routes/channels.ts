@@ -30,6 +30,7 @@ export function createChannelsRoutes({ sessions, sseByChannel }: ChannelsDeps) {
       label?: string
       systemPrompt?: string
       provider?: string
+      vercelAiSdk?: { provider: string; model: string; baseUrl?: string; apiKey?: string }
       disabledTools?: string[]
     }
 
@@ -55,6 +56,9 @@ export function createChannelsRoutes({ sessions, sseByChannel }: ChannelsDeps) {
       ...(body.provider === 'claude-code' || body.provider === 'vercel-ai-sdk'
         ? { provider: body.provider }
         : {}),
+      ...(body.vercelAiSdk?.provider && body.vercelAiSdk?.model
+        ? { vercelAiSdk: body.vercelAiSdk }
+        : {}),
       ...(body.disabledTools?.length ? { disabledTools: body.disabledTools } : {}),
     }
 
@@ -78,6 +82,7 @@ export function createChannelsRoutes({ sessions, sseByChannel }: ChannelsDeps) {
       label?: string
       systemPrompt?: string
       provider?: string
+      vercelAiSdk?: { provider: string; model: string; baseUrl?: string; apiKey?: string } | null
       disabledTools?: string[]
     }
 
@@ -94,6 +99,9 @@ export function createChannelsRoutes({ sessions, sseByChannel }: ChannelsDeps) {
         : body.provider === null || body.provider === ''
           ? { provider: undefined }
           : {}),
+      ...(body.vercelAiSdk !== undefined
+        ? { vercelAiSdk: body.vercelAiSdk?.provider && body.vercelAiSdk?.model ? body.vercelAiSdk : undefined }
+        : {}),
       ...(body.disabledTools !== undefined ? { disabledTools: body.disabledTools?.length ? body.disabledTools : undefined } : {}),
     }
     existing[idx] = updated

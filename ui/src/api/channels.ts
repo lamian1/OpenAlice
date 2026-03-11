@@ -1,11 +1,12 @@
 import { headers } from './client'
-import type { WebChannel } from './types'
+import type { WebChannel, VercelAiSdkOverride } from './types'
 
 export interface ChannelListItem {
   id: string
   label: string
   systemPrompt?: string
   provider?: 'claude-code' | 'vercel-ai-sdk'
+  vercelAiSdk?: VercelAiSdkOverride
   disabledTools?: string[]
 }
 

@@ -28,6 +28,7 @@ export const api = {
 // Re-export all types for convenience
 export type {
   WebChannel,
+  VercelAiSdkOverride,
   ChatMessage,
   ChatResponse,
   ToolCall,

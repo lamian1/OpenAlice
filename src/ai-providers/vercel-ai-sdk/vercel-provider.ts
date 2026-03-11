@@ -15,7 +15,7 @@ import type { MediaAttachment } from '../../core/types.js'
 import { toModelMessages } from '../../core/session.js'
 import { compactIfNeeded } from '../../core/compaction.js'
 import { extractMediaFromToolOutput } from '../../core/media.js'
-import { createModelFromConfig } from '../../core/model-factory.js'
+import { createModelFromConfig, type ModelOverride } from '../../core/model-factory.js'
 import { createAgent } from './agent.js'
 
 export class VercelAIProvider implements AIProvider {
@@ -32,14 +32,16 @@ export class VercelAIProvider implements AIProvider {
   ) {}
 
   /** Lazily create or return the cached agent, re-creating when config, tools, or system prompt change. */
-  private async resolveAgent(systemPrompt?: string, disabledTools?: string[]): Promise<Agent> {
-    const { model, key } = await createModelFromConfig()
+  private async resolveAgent(systemPrompt?: string, disabledTools?: string[], modelOverride?: ModelOverride): Promise<Agent> {
+    const { model, key } = await createModelFromConfig(modelOverride)
     const allTools = await this.getTools()
 
-    // Per-channel tool override: skip cache and create a fresh agent with filtered tools
-    if (disabledTools?.length) {
-      const disabledSet = new Set(disabledTools)
-      const tools = Object.fromEntries(Object.entries(allTools).filter(([name]) => !disabledSet.has(name)))
+    // Per-channel overrides: skip cache and create a fresh agent
+    if (disabledTools?.length || modelOverride) {
+      const disabledSet = disabledTools?.length ? new Set(disabledTools) : null
+      const tools = disabledSet
+        ? Object.fromEntries(Object.entries(allTools).filter(([name]) => !disabledSet.has(name)))
+        : allTools
       return createAgent(model, tools, systemPrompt ?? this.instructions, this.maxSteps)
     }
 
@@ -71,7 +73,7 @@ export class VercelAIProvider implements AIProvider {
 
   async askWithSession(prompt: string, session: SessionStore, opts?: AskOptions): Promise<ProviderResult> {
     // historyPreamble and maxHistoryEntries are not used: Vercel passes native ModelMessage[] with no text wrapping needed.
-    const agent = await this.resolveAgent(opts?.systemPrompt, opts?.disabledTools)
+    const agent = await this.resolveAgent(opts?.systemPrompt, opts?.disabledTools, opts?.vercelAiSdk)
 
     await session.appendUser(prompt, 'human')
 

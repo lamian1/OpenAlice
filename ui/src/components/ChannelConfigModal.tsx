@@ -18,6 +18,14 @@ export function ChannelConfigModal({ channel, onClose, onSaved }: ChannelConfigM
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
+  // Vercel AI SDK override state
+  const [vModelProvider, setVModelProvider] = useState(channel.vercelAiSdk?.provider ?? '')
+  const [vModel, setVModel] = useState(channel.vercelAiSdk?.model ?? '')
+  const [vBaseUrl, setVBaseUrl] = useState(channel.vercelAiSdk?.baseUrl ?? '')
+  const [vApiKey, setVApiKey] = useState(channel.vercelAiSdk?.apiKey ?? '')
+
+  const showVercelConfig = provider === 'vercel-ai-sdk'
+
   useEffect(() => {
     api.tools.load().then(({ inventory }) => setTools(inventory)).catch(() => {})
   }, [])
@@ -26,10 +34,20 @@ export function ChannelConfigModal({ channel, onClose, onSaved }: ChannelConfigM
     setSaving(true)
     setError('')
     try {
+      const vercelAiSdk = showVercelConfig && vModelProvider && vModel
+        ? {
+            provider: vModelProvider,
+            model: vModel,
+            ...(vBaseUrl ? { baseUrl: vBaseUrl } : {}),
+            ...(vApiKey ? { apiKey: vApiKey } : {}),
+          }
+        : undefined
+
       const { channel: updated } = await api.channels.update(channel.id, {
         label: label.trim() || channel.label,
         systemPrompt: systemPrompt.trim() || undefined,
         provider: (provider as 'claude-code' | 'vercel-ai-sdk') || undefined,
+        vercelAiSdk: vercelAiSdk ?? (null as unknown as undefined),
         disabledTools: disabledTools.size > 0 ? [...disabledTools] : undefined,
       })
       onSaved(updated)
@@ -54,6 +72,8 @@ export function ChannelConfigModal({ channel, onClose, onSaved }: ChannelConfigM
     ;(acc[t.group] ??= []).push(t)
     return acc
   }, {})
+
+  const inputClass = 'w-full text-sm px-3 py-2 rounded-lg border border-border bg-bg-secondary text-text placeholder:text-text-muted focus:outline-none focus:border-accent'
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
@@ -86,7 +106,7 @@ export function ChannelConfigModal({ channel, onClose, onSaved }: ChannelConfigM
               type="text"
               value={label}
               onChange={(e) => setLabel(e.target.value)}
-              className="w-full text-sm px-3 py-2 rounded-lg border border-border bg-bg-secondary text-text placeholder:text-text-muted focus:outline-none focus:border-accent"
+              className={inputClass}
             />
           </div>
 
@@ -98,23 +118,78 @@ export function ChannelConfigModal({ channel, onClose, onSaved }: ChannelConfigM
               onChange={(e) => setSystemPrompt(e.target.value)}
               placeholder="Custom instructions for this channel..."
               rows={4}
-              className="w-full text-sm px-3 py-2 rounded-lg border border-border bg-bg-secondary text-text placeholder:text-text-muted focus:outline-none focus:border-accent resize-y"
+              className={`${inputClass} resize-y`}
             />
           </div>
 
-          {/* Provider */}
+          {/* AI Backend */}
           <div>
-            <label className="block text-xs font-medium text-text-muted mb-1">AI Provider</label>
+            <label className="block text-xs font-medium text-text-muted mb-1">AI Backend</label>
             <select
               value={provider}
               onChange={(e) => setProvider(e.target.value)}
-              className="w-full text-sm px-3 py-2 rounded-lg border border-border bg-bg-secondary text-text focus:outline-none focus:border-accent"
+              className={inputClass}
             >
               <option value="">Default (global)</option>
               <option value="vercel-ai-sdk">Vercel AI SDK</option>
               <option value="claude-code">Claude Code</option>
             </select>
           </div>
+
+          {/* Vercel AI SDK config — only when provider is vercel-ai-sdk */}
+          {showVercelConfig && (
+            <div className="rounded-lg border border-border/50 bg-bg-secondary/30 p-3 space-y-3">
+              <p className="text-xs font-medium text-text-muted">Vercel AI SDK Model Config</p>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-text-muted/70 mb-1">LLM Provider</label>
+                  <select
+                    value={vModelProvider}
+                    onChange={(e) => setVModelProvider(e.target.value)}
+                    className={inputClass}
+                  >
+                    <option value="">Select...</option>
+                    <option value="anthropic">Anthropic</option>
+                    <option value="openai">OpenAI</option>
+                    <option value="google">Google</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-text-muted/70 mb-1">Model</label>
+                  <input
+                    type="text"
+                    value={vModel}
+                    onChange={(e) => setVModel(e.target.value)}
+                    placeholder="e.g. gpt-4o"
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs text-text-muted/70 mb-1">Base URL <span className="text-text-muted/40">(optional)</span></label>
+                <input
+                  type="text"
+                  value={vBaseUrl}
+                  onChange={(e) => setVBaseUrl(e.target.value)}
+                  placeholder="https://api.openai.com/v1"
+                  className={inputClass}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-text-muted/70 mb-1">API Key <span className="text-text-muted/40">(optional, overrides global)</span></label>
+                <input
+                  type="password"
+                  value={vApiKey}
+                  onChange={(e) => setVApiKey(e.target.value)}
+                  placeholder="sk-..."
+                  className={inputClass}
+                />
+              </div>
+            </div>
+          )}
 
           {/* Disabled Tools */}
           <div>

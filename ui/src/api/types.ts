@@ -1,10 +1,18 @@
 // ==================== Channels ====================
 
+export interface VercelAiSdkOverride {
+  provider: string
+  model: string
+  baseUrl?: string
+  apiKey?: string
+}
+
 export interface WebChannel {
   id: string
   label: string
   systemPrompt?: string
   provider?: 'claude-code' | 'vercel-ai-sdk'
+  vercelAiSdk?: VercelAiSdkOverride
   disabledTools?: string[]
 }
 

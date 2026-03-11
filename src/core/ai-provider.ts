@@ -42,6 +42,16 @@ export interface AskOptions {
    * Falls back to global config if not specified.
    */
   provider?: 'claude-code' | 'vercel-ai-sdk'
+  /**
+   * Vercel AI SDK model override — per-request provider/model/baseUrl/apiKey.
+   * Only used when the active backend is 'vercel-ai-sdk'.
+   */
+  vercelAiSdk?: {
+    provider: string
+    model: string
+    baseUrl?: string
+    apiKey?: string
+  }
 }
 
 export interface ProviderResult {

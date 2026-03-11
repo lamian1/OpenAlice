@@ -172,14 +172,24 @@ export const toolsSchema = z.object({
   disabled: z.array(z.string()).default([]),
 })
 
+/** Vercel AI SDK model override — per-channel provider/model/key/endpoint. */
+export const vercelAiSdkOverrideSchema = z.object({
+  provider: z.string(),
+  model: z.string(),
+  baseUrl: z.string().optional(),
+  apiKey: z.string().optional(),
+})
+
 export const webSubchannelSchema = z.object({
   /** URL-safe identifier. Used as session path segment: data/sessions/web/{id}.jsonl */
   id: z.string().regex(/^[a-z0-9-_]+$/, 'id must be lowercase alphanumeric with hyphens/underscores'),
   label: z.string().min(1),
   /** System prompt override for this channel. */
   systemPrompt: z.string().optional(),
-  /** AI provider override ('claude-code' | 'vercel-ai-sdk'). Falls back to global config if omitted. */
+  /** AI backend override ('claude-code' | 'vercel-ai-sdk'). Falls back to global config if omitted. */
   provider: z.enum(['claude-code', 'vercel-ai-sdk']).optional(),
+  /** Vercel AI SDK model override. Only used when provider is 'vercel-ai-sdk'. */
+  vercelAiSdk: vercelAiSdkOverrideSchema.optional(),
   /** Tool names to disable in addition to the global disabled list. */
   disabledTools: z.array(z.string()).optional(),
 })
