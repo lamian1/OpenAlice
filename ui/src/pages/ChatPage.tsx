@@ -25,6 +25,8 @@ export function ChatPage({ onSSEStatus }: ChatPageProps) {
   const [streamText, setStreamText] = useState('')
   const [streamTools, setStreamTools] = useState<StreamingToolCall[]>([])
   const streamTextRef = useRef('')
+  const streamToolsRef = useRef<StreamingToolCall[]>([])
+  streamToolsRef.current = streamTools
 
   // Popover state
   const [popoverOpen, setPopoverOpen] = useState(false)
@@ -156,14 +158,31 @@ export function ChatPage({ onSSEStatus }: ChatPageProps) {
       const channel = activeChannelRef.current === 'default' ? undefined : activeChannelRef.current
       const data = await api.chat.send(text, channel)
 
-      // POST returned — clear streaming state, use final result
+      // POST returned — persist streaming tool calls, then add final text
+      const tools = streamToolsRef.current
       setStreamText('')
       setStreamTools([])
       streamTextRef.current = ''
 
       if (data.text) {
         const media = data.media?.length ? data.media : undefined
-        setMessages((prev) => [...prev, { kind: 'text', role: 'assistant', text: data.text, media, _id: nextId.current++ }])
+        setMessages((prev) => {
+          const next = [...prev]
+          // Persist tool calls collected during streaming
+          if (tools.length > 0) {
+            next.push({
+              kind: 'tool_calls',
+              calls: tools.map((t) => ({
+                name: t.name,
+                input: typeof t.input === 'string' ? t.input : JSON.stringify(t.input ?? ''),
+                result: t.result,
+              })),
+              _id: nextId.current++,
+            })
+          }
+          next.push({ kind: 'text', role: 'assistant', text: data.text, media, _id: nextId.current++ })
+          return next
+        })
         if (userScrolledUp.current) {
           setNewMsgCount((c) => c + 1)
         }
@@ -432,11 +451,20 @@ export function ChatPage({ onSSEStatus }: ChatPageProps) {
                     <span className="text-[12px] text-text-muted font-medium">Alice</span>
                   </div>
                   {streamTools.length > 0 && <StreamingToolGroup tools={streamTools} />}
-                  {streamText && (
+                  {streamText ? (
                     <div className="mt-1">
                       <ChatMessage role="assistant" text={streamText} isGrouped />
                     </div>
-                  )}
+                  ) : streamTools.length > 0 && streamTools.every((t) => t.status === 'done') ? (
+                    /* All tools finished but text hasn't arrived yet — show thinking dots */
+                    <div className="text-text-muted ml-8 mt-1">
+                      <div className="flex">
+                        <span className="thinking-dot">.</span>
+                        <span className="thinking-dot">.</span>
+                        <span className="thinking-dot">.</span>
+                      </div>
+                    </div>
+                  ) : null}
                 </>
               ) : (
                 <ThinkingIndicator />
