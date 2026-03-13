@@ -20,6 +20,7 @@ import { glob } from 'node:fs/promises'
 import { join, basename } from 'node:path'
 import type { Plugin, EngineContext } from '../../core/types.js'
 import { SessionStore, toTextHistory } from '../../core/session.js'
+import { McpAskConnector } from './mcp-ask-connector.js'
 
 export interface McpAskConfig {
   port: number
@@ -126,15 +127,7 @@ export class McpAskPlugin implements Plugin {
     })
 
     // Register as connector for outbound delivery (heartbeat/cron)
-    this.unregisterConnector = ctx.connectorCenter.register({
-      channel: 'mcp-ask',
-      to: 'default',
-      capabilities: { push: false, media: false },
-      send: async () => {
-        // MCP is pull-based; outbound send is a no-op.
-        return { delivered: false }
-      },
-    })
+    this.unregisterConnector = ctx.connectorCenter.register(new McpAskConnector())
 
     this.server = serve({ fetch: app.fetch, port: this.config.port }, (info) => {
       console.log(`mcp-ask connector listening on http://localhost:${info.port}/mcp`)

@@ -12,9 +12,7 @@ import { SessionStore } from '../../core/session'
 import { forceCompact } from '../../core/compaction'
 import { readAIBackend, writeAIBackend, type AIBackend } from '../../core/config'
 import type { ConnectorCenter } from '../../core/connector-center.js'
-import type { Connector } from '../types.js'
-
-const MAX_MESSAGE_LENGTH = 4096
+import { TelegramConnector, splitMessage, MAX_MESSAGE_LENGTH } from './telegram-connector.js'
 
 const BACKEND_LABELS: Record<AIBackend, string> = {
   'claude-code': 'Claude Code',
@@ -177,7 +175,7 @@ export class TelegramPlugin implements Plugin {
     // ── Register connector for outbound delivery (heartbeat / cron responses) ──
     if (this.config.allowedChatIds.length > 0) {
       const deliveryChatId = this.config.allowedChatIds[0]
-      this.unregisterConnector = this.connectorCenter!.register(this.createConnector(bot, deliveryChatId))
+      this.unregisterConnector = this.connectorCenter!.register(new TelegramConnector(bot, deliveryChatId))
     }
 
     // ── Start polling ──
@@ -194,37 +192,6 @@ export class TelegramPlugin implements Plugin {
     this.merger?.flush()
     await this.bot?.stop()
     this.unregisterConnector?.()
-  }
-
-  private createConnector(bot: Bot, chatId: number): Connector {
-    return {
-      channel: 'telegram',
-      to: String(chatId),
-      capabilities: { push: true, media: true },
-      send: async (payload) => {
-        // Send media first (photos)
-        if (payload.media && payload.media.length > 0) {
-          for (const attachment of payload.media) {
-            try {
-              const buf = await readFile(attachment.path)
-              await bot.api.sendPhoto(chatId, new InputFile(buf, 'screenshot.jpg'))
-            } catch (err) {
-              console.error('telegram: failed to send photo:', err)
-            }
-          }
-        }
-
-        // Send text with chunking
-        if (payload.text) {
-          const chunks = splitMessage(payload.text, MAX_MESSAGE_LENGTH)
-          for (const chunk of chunks) {
-            await bot.api.sendMessage(chatId, chunk)
-          }
-        }
-
-        return { delivered: true }
-      },
-    }
   }
 
   private async getSession(userId: number): Promise<SessionStore> {
@@ -435,34 +402,4 @@ export class TelegramPlugin implements Plugin {
       }
     }
   }
-}
-
-function splitMessage(text: string, maxLength: number): string[] {
-  if (text.length <= maxLength) return [text]
-
-  const chunks: string[] = []
-  let remaining = text
-
-  while (remaining.length > 0) {
-    if (remaining.length <= maxLength) {
-      chunks.push(remaining)
-      break
-    }
-
-    // Try to split at a newline
-    let splitAt = remaining.lastIndexOf('\n', maxLength)
-    if (splitAt === -1 || splitAt < maxLength / 2) {
-      // Fall back to splitting at a space
-      splitAt = remaining.lastIndexOf(' ', maxLength)
-    }
-    if (splitAt === -1 || splitAt < maxLength / 2) {
-      // Hard split
-      splitAt = maxLength
-    }
-
-    chunks.push(remaining.slice(0, splitAt))
-    remaining = remaining.slice(splitAt).trimStart()
-  }
-
-  return chunks
 }
