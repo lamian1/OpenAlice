@@ -132,23 +132,16 @@ describe('CcxtBroker — Bybit e2e', () => {
     const placed = await broker.placeOrder(ethPerp.contract, order)
     if (!placed.orderId) return
 
+    // Wait for exchange to settle — Bybit needs time before order appears in closed list
+    await new Promise(r => setTimeout(r, 5000))
+
     const detail = await broker.getOrder(placed.orderId)
     console.log(`  getOrder(${placed.orderId}): ${detail ? `status=${detail.orderState.status}` : 'null'}`)
 
-    // Also try raw fetchOrder for diagnostics
-    const exchange = (broker as any).exchange
-    const ccxtSymbol = (broker as any).orderSymbolCache.get(placed.orderId)
-    console.log(`  orderSymbolCache for ${placed.orderId}: ${ccxtSymbol ?? 'MISSING'}`)
-    if (ccxtSymbol) {
-      try {
-        const raw = await exchange.fetchOrder(placed.orderId, ccxtSymbol)
-        console.log(`  raw fetchOrder: status=${raw.status}, filled=${raw.filled}`)
-      } catch (err: any) {
-        console.log(`  raw fetchOrder ERROR: ${err.message}`)
-      }
-    }
-
     expect(detail).not.toBeNull()
+    if (detail) {
+      expect(detail.orderState.status).toBe('Filled')
+    }
 
     // Clean up
     await broker.closePosition(ethPerp.contract, new Decimal('0.01'))
