@@ -382,7 +382,7 @@ function ModelForm({ aiProvider }: { aiProvider: AIProviderConfig }) {
               <button
                 onClick={handleSaveKeys}
                 disabled={keySaveStatus === 'saving'}
-                className="bg-user-bubble text-white rounded-lg px-4 py-2 text-[13px] font-medium cursor-pointer transition-opacity hover:opacity-85 disabled:opacity-50"
+                className="btn-primary"
               >
                 Save Keys
               </button>
@@ -465,7 +465,7 @@ function AgentSdkAuthForm({ aiProvider, onUpdate }: { aiProvider: AIProviderConf
             <button
               onClick={handleSaveKey}
               disabled={!apiKey || keySaveStatus === 'saving'}
-              className="bg-user-bubble text-white rounded-lg px-4 py-2 text-[13px] font-medium cursor-pointer transition-opacity hover:opacity-85 disabled:opacity-50"
+              className="btn-primary"
             >
               Save Key
             </button>

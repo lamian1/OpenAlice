@@ -156,7 +156,7 @@ function FeedsSection({
         <button
           onClick={addFeed}
           disabled={!newName.trim() || !newUrl.trim() || !newSource.trim()}
-          className="border border-border rounded-lg px-4 py-2 text-[13px] font-medium cursor-pointer transition-colors hover:bg-bg-tertiary hover:text-text text-text-muted disabled:opacity-40 disabled:cursor-default"
+          className="btn-secondary"
         >
           Add Feed
         </button>
