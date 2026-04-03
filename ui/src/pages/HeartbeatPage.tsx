@@ -5,14 +5,13 @@ import { SaveIndicator } from '../components/SaveIndicator'
 import { ConfigSection, Section, Field, inputClass } from '../components/form'
 import { useAutoSave } from '../hooks/useAutoSave'
 import { PageHeader } from '../components/PageHeader'
+import { formatShortDateTime } from '../utils/locale'
+import { useI18n } from '../i18n'
 
 // ==================== Helpers ====================
 
 function formatDateTime(ts: number): string {
-  const d = new Date(ts)
-  const date = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  const time = d.toLocaleTimeString('en-US', { hour12: false })
-  return `${date} ${time}`
+  return formatShortDateTime(ts)
 }
 
 function eventTypeColor(type: string): string {
@@ -25,6 +24,7 @@ function eventTypeColor(type: string): string {
 // ==================== Status Bar ====================
 
 function StatusBar() {
+  const { text, translateError } = useI18n()
   const [enabled, setEnabled] = useState<boolean | null>(null)
   const [triggering, setTriggering] = useState(false)
   const [feedback, setFeedback] = useState<string | null>(null)
@@ -39,7 +39,7 @@ function StatusBar() {
       const result = await api.heartbeat.setEnabled(v)
       setEnabled(result.enabled)
     } catch {
-      setError('Failed to toggle heartbeat')
+      setError(text('切换心跳失败', 'Failed to toggle heartbeat'))
       setTimeout(() => setError(null), 3000)
     }
   }
@@ -49,10 +49,10 @@ function StatusBar() {
     setFeedback(null)
     try {
       await api.heartbeat.trigger()
-      setFeedback('Heartbeat triggered!')
+      setFeedback(text('已触发心跳', 'Heartbeat triggered'))
       setTimeout(() => setFeedback(null), 3000)
     } catch (err) {
-      setFeedback(err instanceof Error ? err.message : 'Trigger failed')
+      setFeedback(err instanceof Error ? translateError(err.message) : text('触发失败', 'Trigger failed'))
       setTimeout(() => setFeedback(null), 5000)
     } finally {
       setTriggering(false)
@@ -65,9 +65,9 @@ function StatusBar() {
         <div className="flex items-center gap-3">
           <span className="text-lg">💓</span>
           <div>
-            <div className="text-sm font-medium text-text">Heartbeat</div>
+            <div className="text-sm font-medium text-text">{text('心跳', 'Heartbeat')}</div>
             <div className="text-xs text-text-muted">
-              Periodic self-check and autonomous thinking
+              {text('定期自检与自主思考', 'Periodic self-checks and autonomous reflection')}
             </div>
           </div>
         </div>
@@ -86,7 +86,7 @@ function StatusBar() {
             disabled={triggering}
             className="btn-secondary-sm"
           >
-            {triggering ? 'Triggering...' : 'Trigger Now'}
+            {triggering ? text('触发中...', 'Triggering...') : text('立即触发', 'Trigger now')}
           </button>
 
           {enabled !== null && (
@@ -101,6 +101,7 @@ function StatusBar() {
 // ==================== Config Form ====================
 
 function HeartbeatConfigForm({ config }: { config: AppConfig }) {
+  const { text } = useI18n()
   const [every, setEvery] = useState(config.heartbeat?.every || '30m')
   const [ahEnabled, setAhEnabled] = useState(config.heartbeat?.activeHours != null)
   const [ahStart, setAhStart] = useState(config.heartbeat?.activeHours?.start || '09:00')
@@ -120,8 +121,8 @@ function HeartbeatConfigForm({ config }: { config: AppConfig }) {
   const { status, retry } = useAutoSave({ data: configData, save })
 
   return (
-    <ConfigSection title="Configuration" description="Set how often the heartbeat runs and optionally restrict it to active hours.">
-      <Field label="Interval">
+    <ConfigSection title={text('配置', 'Configuration')} description={text('设置心跳运行频率，并可选择仅在活跃时段内执行。', 'Set the heartbeat cadence and optionally restrict it to active hours.')}>
+      <Field label={text('间隔', 'Interval')}>
         <input
           className={inputClass}
           value={every}
@@ -132,13 +133,13 @@ function HeartbeatConfigForm({ config }: { config: AppConfig }) {
 
       <div className="mb-3">
         <div className="flex items-center justify-between mb-2">
-          <label className="text-[13px] text-text font-medium">Active Hours</label>
+          <label className="text-[13px] text-text font-medium">{text('活跃时段', 'Active hours')}</label>
           <Toggle checked={ahEnabled} onChange={setAhEnabled} />
         </div>
         {ahEnabled && (
           <div className="flex gap-2 items-end">
             <div className="flex-1">
-              <label className="block text-[11px] text-text-muted mb-1">Start</label>
+              <label className="block text-[11px] text-text-muted mb-1">{text('开始', 'Start')}</label>
               <input
                 className={inputClass}
                 value={ahStart}
@@ -147,7 +148,7 @@ function HeartbeatConfigForm({ config }: { config: AppConfig }) {
               />
             </div>
             <div className="flex-1">
-              <label className="block text-[11px] text-text-muted mb-1">End</label>
+              <label className="block text-[11px] text-text-muted mb-1">{text('结束', 'End')}</label>
               <input
                 className={inputClass}
                 value={ahEnd}
@@ -156,23 +157,23 @@ function HeartbeatConfigForm({ config }: { config: AppConfig }) {
               />
             </div>
             <div className="flex-1">
-              <label className="block text-[11px] text-text-muted mb-1">Timezone</label>
+              <label className="block text-[11px] text-text-muted mb-1">{text('时区', 'Timezone')}</label>
               <select
                 className={inputClass}
                 value={ahTimezone}
                 onChange={(e) => setAhTimezone(e.target.value)}
               >
-                <option value="local">Local</option>
+                <option value="local">{text('本地', 'Local')}</option>
                 <option value="UTC">UTC</option>
-                <option value="America/New_York">US Eastern</option>
-                <option value="America/Chicago">US Central</option>
-                <option value="America/Los_Angeles">US Pacific</option>
-                <option value="Europe/London">London</option>
-                <option value="Europe/Berlin">Berlin</option>
-                <option value="Asia/Tokyo">Tokyo</option>
-                <option value="Asia/Shanghai">Shanghai</option>
-                <option value="Asia/Hong_Kong">Hong Kong</option>
-                <option value="Asia/Singapore">Singapore</option>
+                <option value="America/New_York">{text('美国东部', 'US East')}</option>
+                <option value="America/Chicago">{text('美国中部', 'US Central')}</option>
+                <option value="America/Los_Angeles">{text('美国西部', 'US West')}</option>
+                <option value="Europe/London">{text('伦敦', 'London')}</option>
+                <option value="Europe/Berlin">{text('柏林', 'Berlin')}</option>
+                <option value="Asia/Tokyo">{text('东京', 'Tokyo')}</option>
+                <option value="Asia/Shanghai">{text('上海', 'Shanghai')}</option>
+                <option value="Asia/Hong_Kong">{text('香港', 'Hong Kong')}</option>
+                <option value="Asia/Singapore">{text('新加坡', 'Singapore')}</option>
               </select>
             </div>
           </div>
@@ -187,6 +188,7 @@ function HeartbeatConfigForm({ config }: { config: AppConfig }) {
 // ==================== Prompt Editor ====================
 
 function PromptEditor() {
+  const { text } = useI18n()
   const [content, setContent] = useState('')
   const [filePath, setFilePath] = useState('')
   const [loading, setLoading] = useState(true)
@@ -201,7 +203,7 @@ function PromptEditor() {
         setContent(content)
         setFilePath(path)
       })
-      .catch(() => setError('Failed to load prompt file'))
+      .catch(() => setError(text('加载提示词文件失败', 'Failed to load prompt file')))
       .finally(() => setLoading(false))
   }, [])
 
@@ -215,16 +217,16 @@ function PromptEditor() {
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
     } catch {
-      setError('Failed to save')
+      setError(text('保存失败', 'Save failed'))
     } finally {
       setSaving(false)
     }
   }
 
   return (
-    <ConfigSection title="Prompt File" description={filePath || 'The prompt template used for each heartbeat cycle.'}>
+    <ConfigSection title={text('提示词文件', 'Prompt file')} description={filePath || text('每次心跳循环使用的提示词模板。', 'Prompt template used for each heartbeat cycle.')}>
       {loading ? (
-        <div className="text-sm text-text-muted">Loading...</div>
+        <div className="text-sm text-text-muted">{text('加载中...', 'Loading...')}</div>
       ) : (
         <>
           <textarea
@@ -238,12 +240,12 @@ function PromptEditor() {
               disabled={saving || !dirty}
               className="btn-primary-sm"
             >
-              {saving ? 'Saving...' : 'Save'}
+              {saving ? text('保存中...', 'Saving...') : text('保存', 'Save')}
             </button>
             {saved && (
               <span className="inline-flex items-center gap-1.5 text-[11px]">
                 <span className="w-1.5 h-1.5 rounded-full bg-green" />
-                <span className="text-text-muted">Saved</span>
+                <span className="text-text-muted">{text('已保存', 'Saved')}</span>
               </span>
             )}
             {error && (
@@ -253,7 +255,7 @@ function PromptEditor() {
               </span>
             )}
             {dirty && !saved && !error && (
-              <span className="text-[11px] text-text-muted">Unsaved changes</span>
+              <span className="text-[11px] text-text-muted">{text('有未保存的更改', 'Unsaved changes')}</span>
             )}
           </div>
         </>
@@ -265,6 +267,7 @@ function PromptEditor() {
 // ==================== Recent Events ====================
 
 function RecentEvents() {
+  const { text } = useI18n()
   const [entries, setEntries] = useState<EventLogEntry[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -282,20 +285,20 @@ function RecentEvents() {
   }, [])
 
   return (
-    <Section title="Recent Events">
+    <Section title={text('最近事件', 'Recent events')}>
       <div className="bg-bg rounded-lg border border-border overflow-x-auto font-mono text-xs">
         {loading ? (
-          <div className="px-4 py-6 text-center text-text-muted">Loading...</div>
+          <div className="px-4 py-6 text-center text-text-muted">{text('加载中...', 'Loading...')}</div>
         ) : entries.length === 0 ? (
-          <div className="px-4 py-6 text-center text-text-muted">No heartbeat events yet</div>
+          <div className="px-4 py-6 text-center text-text-muted">{text('暂无心跳事件', 'No heartbeat events')}</div>
         ) : (
           <table className="w-full">
             <thead className="bg-bg-secondary">
               <tr className="text-text-muted text-left">
                 <th className="px-3 py-2 w-12">#</th>
-                <th className="px-3 py-2 w-36">Time</th>
-                <th className="px-3 py-2 w-32">Type</th>
-                <th className="px-3 py-2">Payload</th>
+                <th className="px-3 py-2 w-36">{text('时间', 'Time')}</th>
+                <th className="px-3 py-2 w-32">{text('类型', 'Type')}</th>
+                <th className="px-3 py-2">{text('载荷', 'Payload')}</th>
               </tr>
             </thead>
             <tbody>
@@ -325,6 +328,7 @@ function RecentEvents() {
 // ==================== Main Page ====================
 
 export function HeartbeatPage() {
+  const { text } = useI18n()
   const [config, setConfig] = useState<AppConfig | null>(null)
 
   useEffect(() => {
@@ -333,7 +337,7 @@ export function HeartbeatPage() {
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      <PageHeader title="Heartbeat" />
+      <PageHeader title={text('心跳', 'Heartbeat')} />
 
       <div className="flex-1 overflow-y-auto px-4 md:px-8 py-5">
         <div className="max-w-[880px] mx-auto space-y-6">

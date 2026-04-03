@@ -1,5 +1,6 @@
 import { headers } from './client'
 import type { WebChannel, VercelAiSdkOverride, AgentSdkOverride } from './types'
+import { translateErrorMessage } from '../i18n'
 
 export interface ChannelListItem {
   id: string
@@ -14,7 +15,7 @@ export interface ChannelListItem {
 export const channelsApi = {
   async list(): Promise<{ channels: ChannelListItem[] }> {
     const res = await fetch('/api/channels')
-    if (!res.ok) throw new Error('Failed to load channels')
+    if (!res.ok) throw new Error(translateErrorMessage('Failed to load channels'))
     return res.json()
   },
 
@@ -26,7 +27,7 @@ export const channelsApi = {
     })
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: res.statusText }))
-      throw new Error(err.error || res.statusText)
+      throw new Error(translateErrorMessage(err.error || res.statusText))
     }
     return res.json()
   },
@@ -39,7 +40,7 @@ export const channelsApi = {
     })
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: res.statusText }))
-      throw new Error(err.error || res.statusText)
+      throw new Error(translateErrorMessage(err.error || res.statusText))
     }
     return res.json()
   },
@@ -51,7 +52,7 @@ export const channelsApi = {
     })
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: res.statusText }))
-      throw new Error(err.error || res.statusText)
+      throw new Error(translateErrorMessage(err.error || res.statusText))
     }
   },
 }

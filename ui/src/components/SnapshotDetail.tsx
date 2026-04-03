@@ -1,4 +1,6 @@
 import type { UTASnapshotSummary } from '../api'
+import { formatDateTime, formatSignedUsd, formatUsd } from '../utils/locale'
+import { COPY, useI18n } from '../i18n'
 
 // ==================== Props ====================
 
@@ -10,6 +12,7 @@ interface SnapshotDetailProps {
 // ==================== Component ====================
 
 export function SnapshotDetail({ snapshot, onClose }: SnapshotDetailProps) {
+  const { text, phrase } = useI18n()
   const a = snapshot.account
 
   return (
@@ -19,7 +22,7 @@ export function SnapshotDetail({ snapshot, onClose }: SnapshotDetailProps) {
         <div className="flex items-center gap-2">
           <HealthDot health={snapshot.health} />
           <span className="text-[13px] text-text font-medium">
-            {new Date(snapshot.timestamp).toLocaleString()}
+            {formatDateTime(snapshot.timestamp)}
           </span>
           <TriggerBadge trigger={snapshot.trigger} />
           <span className="text-[11px] text-text-muted">{snapshot.accountId}</span>
@@ -34,28 +37,28 @@ export function SnapshotDetail({ snapshot, onClose }: SnapshotDetailProps) {
 
       {/* Account Summary */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 px-4 py-3">
-        <MetricItem label="Net Liquidation" value={fmtStr(a.netLiquidation)} />
-        <MetricItem label="Cash" value={fmtStr(a.totalCashValue)} />
-        <MetricItem label="Unrealized PnL" value={fmtPnlStr(a.unrealizedPnL)} pnl={Number(a.unrealizedPnL)} />
-        <MetricItem label="Realized PnL" value={fmtPnlStr(a.realizedPnL)} pnl={Number(a.realizedPnL)} />
+        <MetricItem label={text('净清算值', 'Net liquidation')} value={fmtStr(a.netLiquidation)} />
+        <MetricItem label={phrase(COPY.common.cash)} value={fmtStr(a.totalCashValue)} />
+        <MetricItem label={phrase(COPY.common.unrealizedPnl)} value={fmtPnlStr(a.unrealizedPnL)} pnl={Number(a.unrealizedPnL)} />
+        <MetricItem label={phrase(COPY.common.realizedPnl)} value={fmtPnlStr(a.realizedPnL)} pnl={Number(a.realizedPnL)} />
       </div>
 
       {/* Positions */}
       {snapshot.positions.length > 0 && (
         <div className="px-4 pb-3">
           <p className="text-[11px] text-text-muted uppercase tracking-wide mb-1.5">
-            Positions ({snapshot.positions.length})
+            {phrase(COPY.common.positions)}（{snapshot.positions.length}）
           </p>
           <div className="border border-border rounded overflow-x-auto">
             <table className="w-full text-[12px]">
               <thead>
                 <tr className="bg-bg text-text-muted text-left">
-                  <th className="px-2.5 py-1.5 font-medium">Symbol</th>
-                  <th className="px-2.5 py-1.5 font-medium text-right">Qty</th>
-                  <th className="px-2.5 py-1.5 font-medium text-right">Avg Cost</th>
-                  <th className="px-2.5 py-1.5 font-medium text-right">Mkt Price</th>
-                  <th className="px-2.5 py-1.5 font-medium text-right">Mkt Value</th>
-                  <th className="px-2.5 py-1.5 font-medium text-right">PnL</th>
+                  <th className="px-2.5 py-1.5 font-medium">{phrase(COPY.common.instrument)}</th>
+                  <th className="px-2.5 py-1.5 font-medium text-right">{phrase(COPY.common.quantity)}</th>
+                  <th className="px-2.5 py-1.5 font-medium text-right">{phrase(COPY.common.avgCost)}</th>
+                  <th className="px-2.5 py-1.5 font-medium text-right">{phrase(COPY.common.marketPrice)}</th>
+                  <th className="px-2.5 py-1.5 font-medium text-right">{phrase(COPY.common.marketValue)}</th>
+                  <th className="px-2.5 py-1.5 font-medium text-right">{phrase(COPY.common.pnl)}</th>
                 </tr>
               </thead>
               <tbody>
@@ -89,7 +92,7 @@ export function SnapshotDetail({ snapshot, onClose }: SnapshotDetailProps) {
       {snapshot.openOrders.length > 0 && (
         <div className="px-4 pb-3">
           <p className="text-[11px] text-text-muted uppercase tracking-wide mb-1.5">
-            Open Orders ({snapshot.openOrders.length})
+            {text('未成交订单', 'Open orders')}（{snapshot.openOrders.length}）
           </p>
           <div className="space-y-1">
             {snapshot.openOrders.map((o, i) => (
@@ -107,7 +110,7 @@ export function SnapshotDetail({ snapshot, onClose }: SnapshotDetailProps) {
       {/* Empty state */}
       {snapshot.positions.length === 0 && snapshot.openOrders.length === 0 && (
         <div className="px-4 pb-3">
-          <p className="text-[12px] text-text-muted">No positions or orders at this time.</p>
+          <p className="text-[12px] text-text-muted">{text('当前没有持仓或订单。', 'No positions or orders right now.')}</p>
         </div>
       )}
     </div>
@@ -156,12 +159,11 @@ function symbolFromAliceId(aliceId: string): string {
 function fmtStr(s: string): string {
   const n = Number(s)
   if (isNaN(n)) return s
-  return `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  return formatUsd(n, 2)
 }
 
 function fmtPnlStr(s: string): string {
   const n = Number(s)
   if (isNaN(n)) return s
-  const sign = n >= 0 ? '+' : ''
-  return `${sign}$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  return formatSignedUsd(n, 2)
 }

@@ -1,4 +1,5 @@
 import { createContext, useContext, useCallback, useState, useEffect, useRef, type ReactNode } from 'react'
+import { getCurrentLocale } from '../i18n'
 
 // ==================== Types ====================
 
@@ -20,7 +21,13 @@ const ToastContext = createContext<ToastContextValue | null>(null)
 
 export function useToast(): ToastContextValue {
   const ctx = useContext(ToastContext)
-  if (!ctx) throw new Error('useToast must be used within ToastProvider')
+  if (!ctx) {
+    throw new Error(
+      getCurrentLocale() === 'zh-CN'
+        ? 'useToast 必须在 ToastProvider 内部使用'
+        : 'useToast must be used within ToastProvider',
+    )
+  }
   return ctx
 }
 
@@ -83,6 +90,7 @@ function ToastContainer({ toasts, onDismiss }: { toasts: ToastItem[]; onDismiss:
 
 function ToastNotification({ toast, onDismiss }: { toast: ToastItem; onDismiss: () => void }) {
   const [mounted, setMounted] = useState(false)
+  const dismissLabel = getCurrentLocale() === 'zh-CN' ? '关闭' : 'Dismiss'
 
   useEffect(() => {
     // Trigger enter animation on next frame
@@ -116,7 +124,7 @@ function ToastNotification({ toast, onDismiss }: { toast: ToastItem; onDismiss: 
       <button
         onClick={onDismiss}
         className="shrink-0 opacity-60 hover:opacity-100 transition-opacity"
-        aria-label="Dismiss"
+        aria-label={dismissLabel}
       >
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
           <path d="M18 6L6 18M6 6l12 12" />

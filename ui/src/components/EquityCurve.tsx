@@ -3,6 +3,7 @@ import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine,
 } from 'recharts'
 import type { EquityCurvePoint } from '../api'
+import { formatAxisTime, formatCompactUsd, formatDateTime, formatUsd } from '../utils/locale'
 
 // ==================== Time ranges ====================
 
@@ -12,7 +13,7 @@ const RANGES = [
   { label: '24H', ms: 24 * 60 * 60 * 1000 },
   { label: '7D', ms: 7 * 24 * 60 * 60 * 1000 },
   { label: '30D', ms: 30 * 24 * 60 * 60 * 1000 },
-  { label: 'All', ms: 0 },
+  { label: '全部', ms: 0 },
 ] as const
 
 // ==================== Props ====================
@@ -59,7 +60,7 @@ export function EquityCurve({
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-[13px] font-semibold text-text-muted uppercase tracking-wide">
-          Equity Curve
+          资金曲线
         </h3>
         <div className="flex gap-1">
           {RANGES.map(r => (
@@ -102,7 +103,7 @@ export function EquityCurve({
                 : 'border-border text-text-muted hover:text-text hover:bg-bg-tertiary'
             }`}
           >
-            All
+            全部
           </button>
         </div>
       )}
@@ -175,10 +176,10 @@ function CustomTooltip({ active, payload, isAllView, accounts }: any) {
   return (
     <div className="bg-bg-secondary border border-border rounded-md px-3 py-2 shadow-lg text-[12px]">
       <p className="text-text-muted mb-1">
-        {new Date(data.time).toLocaleString()}
+        {formatDateTime(data.time)}
       </p>
       <p className="text-text font-semibold tabular-nums">
-        ${Number(data.equity).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        {formatUsd(Number(data.equity), 2)}
       </p>
       {isAllView && data.accounts && Object.keys(data.accounts).length > 1 && (
         <div className="mt-1.5 pt-1.5 border-t border-border space-y-0.5">
@@ -186,7 +187,7 @@ function CustomTooltip({ active, payload, isAllView, accounts }: any) {
             <div key={id} className="flex justify-between gap-4">
               <span className="text-text-muted">{accountMap.get(id) ?? id}</span>
               <span className="text-text tabular-nums">
-                ${Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {formatUsd(Number(val), 2)}
               </span>
             </div>
           ))}
@@ -202,14 +203,11 @@ function formatTime(ts: number): string {
   const d = new Date(ts)
   const now = new Date()
   if (d.toDateString() === now.toDateString()) {
-    return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+    return formatAxisTime(ts)
   }
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) +
-    ' ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+  return formatAxisTime(ts)
 }
 
 function formatCurrency(val: number): string {
-  if (val >= 1_000_000) return `$${(val / 1_000_000).toFixed(1)}M`
-  if (val >= 1_000) return `$${(val / 1_000).toFixed(1)}K`
-  return `$${val.toFixed(0)}`
+  return formatCompactUsd(val)
 }

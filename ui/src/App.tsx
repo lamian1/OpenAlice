@@ -14,6 +14,7 @@ import { DevPage } from './pages/DevPage'
 import { HeartbeatPage } from './pages/HeartbeatPage'
 import { ToolsPage } from './pages/ToolsPage'
 import { AgentStatusPage } from './pages/AgentStatusPage'
+import { useI18n } from './i18n'
 
 export type Page =
   | 'chat' | 'portfolio' | 'events' | 'agent-status' | 'heartbeat' | 'market-data' | 'news' | 'connectors'
@@ -38,6 +39,7 @@ export const ROUTES: Record<Page, string> = {
 }
 
 export function App() {
+  const { text } = useI18n()
   const [sseConnected, setSseConnected] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const location = useLocation()
@@ -55,7 +57,7 @@ export function App() {
           <button
             onClick={() => setSidebarOpen(true)}
             className="text-text-muted hover:text-text p-1 -ml-1"
-            aria-label="Open menu"
+            aria-label={text('打开菜单', 'Open menu')}
           >
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
               <path d="M3 5h14M3 10h14M3 15h14" />

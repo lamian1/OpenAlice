@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { api } from '../api'
+import { useI18n } from '../i18n'
 
 export function ReconnectButton({ accountId }: { accountId: string }) {
+  const { text, translateError } = useI18n()
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [message, setMessage] = useState('')
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -15,15 +17,15 @@ export function ReconnectButton({ accountId }: { accountId: string }) {
       const result = await api.trading.reconnectAccount(accountId)
       if (result.success) {
         setStatus('success')
-        setMessage(result.message || 'Connected')
+        setMessage(translateError(result.message || text('已连接', 'Connected')))
         timerRef.current = setTimeout(() => setStatus('idle'), 3000)
       } else {
         setStatus('error')
-        setMessage(result.error || 'Connection failed')
+        setMessage(translateError(result.error || text('连接失败', 'Connection failed')))
       }
     } catch (err) {
       setStatus('error')
-      setMessage(err instanceof Error ? err.message : 'Connection failed')
+      setMessage(err instanceof Error ? translateError(err.message) : text('连接失败', 'Connection failed'))
     }
   }
 
@@ -34,7 +36,7 @@ export function ReconnectButton({ accountId }: { accountId: string }) {
         disabled={status === 'loading'}
         className="px-3 py-1.5 text-[13px] font-medium rounded-md border border-border hover:bg-bg-tertiary disabled:opacity-50 transition-colors"
       >
-        {status === 'loading' ? 'Connecting...' : 'Reconnect'}
+        {status === 'loading' ? text('连接中...', 'Connecting...') : text('重新连接', 'Reconnect')}
       </button>
       {status === 'success' && <span className="text-[12px] text-green">{message}</span>}
       {status === 'error' && <span className="text-[12px] text-red">{message}</span>}

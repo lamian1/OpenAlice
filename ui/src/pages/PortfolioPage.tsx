@@ -7,6 +7,8 @@ import { EmptyState } from '../components/StateViews'
 import { EquityCurve } from '../components/EquityCurve'
 import { SnapshotDetail } from '../components/SnapshotDetail'
 import { Toggle } from '../components/Toggle'
+import { formatDateTime, formatNumber, formatSignedUsd, formatTimeOnly, formatUsd } from '../utils/locale'
+import { useI18n } from '../i18n'
 
 // ==================== Types ====================
 
@@ -37,6 +39,7 @@ const EMPTY: PortfolioData = { equity: null, accounts: [] }
 // ==================== Page ====================
 
 export function PortfolioPage() {
+  const { text } = useI18n()
   const healthMap = useAccountHealth()
   const [data, setData] = useState<PortfolioData>(EMPTY)
   const [loading, setLoading] = useState(true)
@@ -142,15 +145,15 @@ export function PortfolioPage() {
   return (
     <div className="flex flex-col flex-1 min-h-0">
       <PageHeader
-        title="Portfolio"
-        description={<>Live portfolio overview across all trading accounts.{lastRefresh && <span className="ml-2 text-text-muted/50">Updated {lastRefresh.toLocaleTimeString()}</span>}</>}
+        title={text('投资组合', 'Portfolio')}
+        description={<>{text('所有交易账户的实时总览。', 'Live overview across all trading accounts.')}{lastRefresh && <span className="ml-2 text-text-muted/50">{text('更新时间', 'Updated')} {formatTimeOnly(lastRefresh)}</span>}</>}
         right={
           <button
             onClick={refresh}
             disabled={loading}
             className="px-3 py-1.5 text-[13px] font-medium rounded-md border border-border hover:bg-bg-tertiary disabled:opacity-50 transition-colors"
           >
-            {loading ? 'Loading...' : 'Refresh'}
+            {loading ? text('加载中...', 'Loading...') : text('刷新', 'Refresh')}
           </button>
         }
       />
@@ -196,10 +199,10 @@ export function PortfolioPage() {
 
           {/* Empty states */}
           {data.accounts.length === 0 && !loading && (
-            <EmptyState title="No trading accounts connected." description="Configure connections in the Trading page." />
+            <EmptyState title={text('尚未连接任何交易账户。', 'No trading accounts connected yet.')} description={text('请在交易页面中配置连接。', 'Configure your connections on the trading page.')} />
           )}
           {data.accounts.length > 0 && allPositions.length === 0 && !loading && (
-            <EmptyState title="No open positions." />
+            <EmptyState title={text('当前没有持仓。', 'No open positions right now.')} />
           )}
 
           {allWalletLogs.length > 0 && (
@@ -232,7 +235,7 @@ async function fetchPortfolioData(): Promise<PortfolioData> {
           ])
           return { ...acct, positions: posResp.positions, walletLog: logResp.commits }
         } catch {
-          return { ...acct, positions: [], walletLog: [], error: 'Not connected' }
+          return { ...acct, positions: [], walletLog: [], error: '__not_connected__' }
         }
       }),
     )
@@ -246,10 +249,11 @@ async function fetchPortfolioData(): Promise<PortfolioData> {
 // ==================== Hero Metrics ====================
 
 function HeroMetrics({ equity }: { equity: AggregatedEquity | null }) {
+  const { text } = useI18n()
   if (!equity) {
     return (
       <div className="border border-border rounded-lg bg-bg-secondary p-5 text-center">
-        <p className="text-[13px] text-text-muted">Unable to load portfolio data.</p>
+        <p className="text-[13px] text-text-muted">{text('无法加载投资组合数据。', 'Unable to load portfolio data.')}</p>
       </div>
     )
   }
@@ -257,10 +261,10 @@ function HeroMetrics({ equity }: { equity: AggregatedEquity | null }) {
   return (
     <div className="border border-border rounded-lg bg-bg-secondary p-5">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <HeroItem label="Total Equity" value={fmt(equity.totalEquity)} />
-        <HeroItem label="Cash" value={fmt(equity.totalCash)} />
-        <HeroItem label="Unrealized PnL" value={fmtPnl(equity.totalUnrealizedPnL)} pnl={equity.totalUnrealizedPnL} />
-        <HeroItem label="Realized PnL" value={fmtPnl(equity.totalRealizedPnL)} pnl={equity.totalRealizedPnL} />
+        <HeroItem label={text('总权益', 'Total equity')} value={fmt(equity.totalEquity)} />
+        <HeroItem label={text('现金', 'Cash')} value={fmt(equity.totalCash)} />
+        <HeroItem label={text('未实现盈亏', 'Unrealized PnL')} value={fmtPnl(equity.totalUnrealizedPnL)} pnl={equity.totalUnrealizedPnL} />
+        <HeroItem label={text('已实现盈亏', 'Realized PnL')} value={fmtPnl(equity.totalRealizedPnL)} pnl={equity.totalRealizedPnL} />
       </div>
     </div>
   )
@@ -285,6 +289,7 @@ const HEALTH_DOT: Record<string, string> = {
 }
 
 function AccountStrip({ sources }: { sources: Array<{ id: string; label: string; provider: string; equity: number; unrealizedPnL: number; error?: string; health?: string; disabled?: boolean }> }) {
+  const { text } = useI18n()
   return (
     <div className="flex flex-wrap gap-2">
       {sources.map(s => {
@@ -298,9 +303,9 @@ function AccountStrip({ sources }: { sources: Array<{ id: string; label: string;
             <div className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
             <span className="text-text font-medium">{s.label}</span>
             {isDisabled
-              ? <span className="text-text-muted text-[11px]">Disabled</span>
+              ? <span className="text-text-muted text-[11px]">{text('已禁用', 'Disabled')}</span>
               : isOffline
-                ? <span className="text-red text-[11px]">Reconnecting...</span>
+                ? <span className="text-red text-[11px]">{text('重连中...', 'Reconnecting...')}</span>
                 : <>
                     <span className="text-text-muted">{fmt(s.equity)}</span>
                     {s.unrealizedPnL !== 0 && (
@@ -310,7 +315,7 @@ function AccountStrip({ sources }: { sources: Array<{ id: string; label: string;
                     )}
                   </>
             }
-            {s.error && !isOffline && !isDisabled && <span className="text-text-muted/50">{s.error}</span>}
+            {s.error && !isOffline && !isDisabled && <span className="text-text-muted/50">{s.error === '__not_connected__' ? text('未连接', 'Not connected') : s.error}</span>}
           </div>
         )
       })}
@@ -333,7 +338,7 @@ function isDerivative(p: Position): boolean {
 }
 
 /** Build display fragments for a contract based on its secType. */
-function contractDisplay(p: Position): { name: string; tag?: string } {
+function contractDisplay(p: Position): { name: string; tag?: 'option' | 'future' | 'spot' } {
   const c = p.contract
   const sym = c.symbol ?? '???'
   const t = c.secType
@@ -342,11 +347,11 @@ function contractDisplay(p: Position): { name: string; tag?: string } {
     // Options: show localSymbol if available, else construct from parts
     const optDesc = c.localSymbol
       ?? [sym, c.lastTradeDateOrContractMonth, c.right, c.strike && fmt(c.strike)].filter(Boolean).join(' ')
-    return { name: optDesc, tag: 'opt' }
+    return { name: optDesc, tag: 'option' }
   }
   if (t === 'FUT') {
     const expiry = c.lastTradeDateOrContractMonth
-    return { name: expiry ? `${sym} ${expiry}` : sym, tag: 'fut' }
+    return { name: expiry ? `${sym} ${expiry}` : sym, tag: 'future' }
   }
   if (t === 'CRYPTO') {
     return { name: sym, tag: 'spot' }
@@ -356,22 +361,33 @@ function contractDisplay(p: Position): { name: string; tag?: string } {
 }
 
 function PositionsTable({ positions }: { positions: PositionWithAccount[] }) {
+  const { text } = useI18n()
+  const tagLabel = (tag: 'option' | 'future' | 'spot') => {
+    switch (tag) {
+      case 'option':
+        return text('期权', 'Option')
+      case 'future':
+        return text('期货', 'Future')
+      case 'spot':
+        return text('现货', 'Spot')
+    }
+  }
   return (
     <div>
       <h3 className="text-[13px] font-semibold text-text-muted uppercase tracking-wide mb-3">
-        Positions
+        {text('持仓', 'Positions')}
       </h3>
       <div className="border border-border rounded-lg overflow-x-auto">
         <table className="w-full text-[13px]">
           <thead>
             <tr className="bg-bg-secondary text-text-muted text-left">
-              <th className="px-3 py-2 font-medium">Symbol</th>
-              <th className="px-3 py-2 font-medium text-right">Qty</th>
-              <th className="px-3 py-2 font-medium text-right">Avg Cost</th>
-              <th className="px-3 py-2 font-medium text-right">Current</th>
-              <th className="px-3 py-2 font-medium text-right">Mkt Value</th>
-              <th className="px-3 py-2 font-medium text-right">PnL</th>
-              <th className="px-3 py-2 font-medium text-right">PnL %</th>
+              <th className="px-3 py-2 font-medium">{text('标的', 'Instrument')}</th>
+              <th className="px-3 py-2 font-medium text-right">{text('数量', 'Quantity')}</th>
+              <th className="px-3 py-2 font-medium text-right">{text('平均成本', 'Avg cost')}</th>
+              <th className="px-3 py-2 font-medium text-right">{text('当前价', 'Current price')}</th>
+              <th className="px-3 py-2 font-medium text-right">{text('市值', 'Market value')}</th>
+              <th className="px-3 py-2 font-medium text-right">{text('盈亏', 'PnL')}</th>
+              <th className="px-3 py-2 font-medium text-right">{text('盈亏率', 'PnL %')}</th>
             </tr>
           </thead>
           <tbody>
@@ -386,7 +402,7 @@ function PositionsTable({ positions }: { positions: PositionWithAccount[] }) {
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="font-medium text-text">{display.name}</span>
                       {display.tag && (
-                        <span className="text-[10px] px-1 py-0.5 rounded bg-bg-tertiary text-text-muted">{display.tag}</span>
+                        <span className="text-[10px] px-1 py-0.5 rounded bg-bg-tertiary text-text-muted">{tagLabel(display.tag)}</span>
                       )}
                       {deriv && (
                         <span className={`text-[10px] px-1 py-0.5 rounded font-medium ${p.side === 'long' ? 'bg-green/15 text-green' : 'bg-red/15 text-red'}`}>
@@ -437,7 +453,7 @@ function TradeLog({ commits }: { commits: CommitWithAccount[] }) {
   return (
     <div>
       <h3 className="text-[13px] font-semibold text-text-muted uppercase tracking-wide mb-3">
-        Recent Trades
+        最近交易
       </h3>
       <div className="space-y-2">
         {sorted.map((commit) => {
@@ -457,7 +473,7 @@ function TradeLog({ commits }: { commits: CommitWithAccount[] }) {
                   <div className="flex items-center gap-3 mt-1">
                     <span className="text-[11px] text-text-muted font-mono">{commit.hash}</span>
                     <span className="text-[11px] text-text-muted/50">
-                      {new Date(commit.timestamp).toLocaleString()}
+                      {formatDateTime(commit.timestamp)}
                     </span>
                   </div>
                   {commit.operations.length > 0 && (
@@ -501,6 +517,7 @@ function SnapshotSettings({ enabled, every, onEnabledChange, onEveryChange, save
   onEveryChange: (v: string) => void
   saveStatus: string
 }) {
+  const { text } = useI18n()
   const isPreset = INTERVAL_PRESETS.some(p => p.value === every)
   const [showCustom, setShowCustom] = useState(!isPreset)
 
@@ -530,7 +547,7 @@ function SnapshotSettings({ enabled, every, onEnabledChange, onEveryChange, save
               : 'hover:text-text hover:bg-bg-tertiary'
           }`}
         >
-          Custom
+          {text('自定义', 'Custom')}
         </button>
       </div>
       {showCustom && (
@@ -538,11 +555,11 @@ function SnapshotSettings({ enabled, every, onEnabledChange, onEveryChange, save
           className="w-16 px-1.5 py-0.5 rounded border border-border bg-bg text-text text-[12px] text-center"
           value={every}
           onChange={(e) => onEveryChange(e.target.value)}
-          placeholder="e.g. 2h"
+          placeholder={text('例如 2h', 'e.g. 2h')}
         />
       )}
-      {saveStatus === 'saving' && <span className="text-accent text-[10px]">saving...</span>}
-      {saveStatus === 'error' && <span className="text-red text-[10px]">save failed</span>}
+      {saveStatus === 'saving' && <span className="text-accent text-[10px]">{text('保存中...', 'Saving...')}</span>}
+      {saveStatus === 'error' && <span className="text-red text-[10px]">{text('保存失败', 'Save failed')}</span>}
     </div>
   )
 }
@@ -550,16 +567,13 @@ function SnapshotSettings({ enabled, every, onEnabledChange, onEveryChange, save
 // ==================== Formatting Helpers ====================
 
 function fmt(n: number): string {
-  return n >= 1000 ? `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-    : `$${n.toFixed(2)}`
+  return formatUsd(n, 2)
 }
 
 function fmtPnl(n: number): string {
-  const sign = n >= 0 ? '+' : ''
-  return `${sign}${fmt(n)}`
+  return formatSignedUsd(n, 2)
 }
 
 function fmtNum(n: number): string {
-  return n >= 1 ? n.toLocaleString('en-US', { maximumFractionDigits: 4 })
-    : n.toPrecision(4)
+  return formatNumber(n)
 }

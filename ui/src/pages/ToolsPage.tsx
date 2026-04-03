@@ -6,20 +6,21 @@ import { SaveIndicator } from '../components/SaveIndicator'
 import { useAutoSave } from '../hooks/useAutoSave'
 import { PageHeader } from '../components/PageHeader'
 import { PageLoading, EmptyState } from '../components/StateViews'
+import { COPY, useI18n } from '../i18n'
 
-const GROUP_LABELS: Record<string, string> = {
-  thinking: 'Thinking Kit',
-  brain: 'Brain',
-  browser: 'Browser',
-  cron: 'Cron Scheduler',
-  equity: 'Equity Data',
-  'crypto-data': 'Crypto Data',
-  'currency-data': 'Currency Data',
-  news: 'News',
-  'news-archive': 'News Archive',
-  analysis: 'Analysis Kit',
-  'crypto-trading': 'Crypto Trading',
-  'securities-trading': 'Securities Trading',
+const GROUP_LABELS: Record<string, { zh: string; en: string }> = {
+  thinking: { zh: '思考工具集', en: 'Thinking tools' },
+  brain: { zh: '记忆', en: 'Memory' },
+  browser: { zh: '浏览器', en: 'Browser' },
+  cron: { zh: '定时任务', en: 'Cron' },
+  equity: { zh: '股票数据', en: 'Equity data' },
+  'crypto-data': { zh: '加密数据', en: 'Crypto data' },
+  'currency-data': { zh: '汇率数据', en: 'FX data' },
+  news: { zh: '新闻', en: 'News' },
+  'news-archive': { zh: '新闻档案', en: 'News archive' },
+  analysis: { zh: '分析工具集', en: 'Analysis tools' },
+  'crypto-trading': { zh: '加密交易', en: 'Crypto trading' },
+  'securities-trading': { zh: '证券交易', en: 'Securities trading' },
 }
 
 interface ToolGroup {
@@ -29,6 +30,7 @@ interface ToolGroup {
 }
 
 export function ToolsPage() {
+  const { phrase, text } = useI18n()
   const [inventory, setInventory] = useState<ToolInfo[]>([])
   const [disabled, setDisabled] = useState<Set<string>>(new Set())
   const [loaded, setLoaded] = useState(false)
@@ -50,10 +52,10 @@ export function ToolsPage() {
     }
     return Array.from(map.entries()).map(([key, tools]) => ({
       key,
-      label: GROUP_LABELS[key] ?? key,
+      label: GROUP_LABELS[key] ? text(GROUP_LABELS[key].zh, GROUP_LABELS[key].en) : key,
       tools: tools.sort((a, b) => a.name.localeCompare(b.name)),
     }))
-  }, [inventory])
+  }, [inventory, text])
 
   const configData = useMemo(
     () => ({ disabled: [...disabled].sort() }),
@@ -98,8 +100,8 @@ export function ToolsPage() {
   return (
     <div className="flex flex-col flex-1 min-h-0">
       <PageHeader
-        title="Tools"
-        description={<>{inventory.length} tools in {groups.length} groups — changes apply on next AI request</>}
+        title={phrase(COPY.tools.title)}
+        description={<>{text(`${inventory.length} 个工具，分为 ${groups.length} 个分组，改动会在下一次 AI 请求时生效`, `${inventory.length} tools across ${groups.length} groups. Changes apply on the next AI request.`)}</>}
         right={<SaveIndicator status={status} onRetry={retry} />}
       />
 
@@ -107,7 +109,7 @@ export function ToolsPage() {
         {!loaded ? (
           <PageLoading />
         ) : groups.length === 0 ? (
-          <EmptyState title="No tools registered." description="Tools will appear here when the engine starts." />
+          <EmptyState title={phrase(COPY.tools.emptyTitle)} description={phrase(COPY.tools.emptyDescription)} />
         ) : (
           <div className="max-w-[880px] mx-auto space-y-2">
             {groups.map((g) => (

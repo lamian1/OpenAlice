@@ -1,10 +1,11 @@
 import { headers } from './client'
 import type { CronJob, CronSchedule } from './types'
+import { translateErrorMessage } from '../i18n'
 
 export const cronApi = {
   async list(): Promise<{ jobs: CronJob[] }> {
     const res = await fetch('/api/cron/jobs')
-    if (!res.ok) throw new Error('Failed to load cron jobs')
+    if (!res.ok) throw new Error(translateErrorMessage('Failed to load cron jobs'))
     return res.json()
   },
 
@@ -16,7 +17,7 @@ export const cronApi = {
     })
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: 'Create failed' }))
-      throw new Error(err.error || 'Create failed')
+      throw new Error(translateErrorMessage(err.error || 'Create failed'))
     }
     return res.json()
   },
@@ -29,7 +30,7 @@ export const cronApi = {
     })
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: 'Update failed' }))
-      throw new Error(err.error || 'Update failed')
+      throw new Error(translateErrorMessage(err.error || 'Update failed'))
     }
   },
 
@@ -37,7 +38,7 @@ export const cronApi = {
     const res = await fetch(`/api/cron/jobs/${id}`, { method: 'DELETE' })
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: 'Delete failed' }))
-      throw new Error(err.error || 'Delete failed')
+      throw new Error(translateErrorMessage(err.error || 'Delete failed'))
     }
   },
 
@@ -45,7 +46,7 @@ export const cronApi = {
     const res = await fetch(`/api/cron/jobs/${id}/run`, { method: 'POST' })
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: 'Run failed' }))
-      throw new Error(err.error || 'Run failed')
+      throw new Error(translateErrorMessage(err.error || 'Run failed'))
     }
   },
 }

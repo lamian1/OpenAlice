@@ -3,6 +3,7 @@ import { api } from '../api'
 import type { LoginMethod } from '../api/types'
 import type { ChannelListItem } from '../api/channels'
 import type { ToolInfo } from '../api/tools'
+import { useI18n } from '../i18n'
 
 interface ChannelConfigModalProps {
   channel: ChannelListItem
@@ -11,6 +12,7 @@ interface ChannelConfigModalProps {
 }
 
 export function ChannelConfigModal({ channel, onClose, onSaved }: ChannelConfigModalProps) {
+  const { text, translateError } = useI18n()
   const [label, setLabel] = useState(channel.label)
   const [systemPrompt, setSystemPrompt] = useState(channel.systemPrompt ?? '')
   const [provider, setProvider] = useState(channel.provider ?? '')
@@ -70,7 +72,7 @@ export function ChannelConfigModal({ channel, onClose, onSaved }: ChannelConfigM
       })
       onSaved(updated)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save')
+      setError(err instanceof Error ? translateError(err.message) : text('保存失败', 'Save failed'))
     } finally {
       setSaving(false)
     }
@@ -119,7 +121,7 @@ export function ChannelConfigModal({ channel, onClose, onSaved }: ChannelConfigM
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
           {/* Label */}
           <div>
-            <label className="block text-xs font-medium text-text-muted mb-1">Label</label>
+            <label className="block text-xs font-medium text-text-muted mb-1">{text('名称', 'Name')}</label>
             <input
               type="text"
               value={label}
@@ -130,11 +132,11 @@ export function ChannelConfigModal({ channel, onClose, onSaved }: ChannelConfigM
 
           {/* System Prompt */}
           <div>
-            <label className="block text-xs font-medium text-text-muted mb-1">System Prompt</label>
+            <label className="block text-xs font-medium text-text-muted mb-1">{text('系统提示词', 'System prompt')}</label>
             <textarea
               value={systemPrompt}
               onChange={(e) => setSystemPrompt(e.target.value)}
-              placeholder="Custom instructions for this channel..."
+              placeholder={text('这个频道的自定义指令...', 'Custom instructions for this channel...')}
               rows={4}
               className={`${inputClass} resize-y`}
             />
@@ -142,13 +144,13 @@ export function ChannelConfigModal({ channel, onClose, onSaved }: ChannelConfigM
 
           {/* AI Backend */}
           <div>
-            <label className="block text-xs font-medium text-text-muted mb-1">AI Backend</label>
+            <label className="block text-xs font-medium text-text-muted mb-1">{text('AI 后端', 'AI backend')}</label>
             <select
               value={provider}
               onChange={(e) => setProvider(e.target.value)}
               className={inputClass}
             >
-              <option value="">Default (global)</option>
+              <option value="">{text('默认（全局）', 'Default (global)')}</option>
               <option value="agent-sdk">Claude</option>
               <option value="vercel-ai-sdk">Vercel AI SDK</option>
             </select>
@@ -157,36 +159,36 @@ export function ChannelConfigModal({ channel, onClose, onSaved }: ChannelConfigM
           {/* Vercel AI SDK config — only when provider is vercel-ai-sdk */}
           {showVercelConfig && (
             <div className="rounded-lg border border-border/50 bg-bg-secondary/30 p-3 space-y-3">
-              <p className="text-xs font-medium text-text-muted">Vercel AI SDK Model Config</p>
+              <p className="text-xs font-medium text-text-muted">{text('Vercel AI SDK 模型配置', 'Vercel AI SDK model settings')}</p>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs text-text-muted/70 mb-1">LLM Provider</label>
+                  <label className="block text-xs text-text-muted/70 mb-1">{text('模型提供方', 'Model provider')}</label>
                   <select
                     value={vModelProvider}
                     onChange={(e) => setVModelProvider(e.target.value)}
                     className={inputClass}
                   >
-                    <option value="">Select...</option>
+                    <option value="">{text('请选择...', 'Select...')}</option>
                     <option value="anthropic">Anthropic</option>
                     <option value="openai">OpenAI</option>
                     <option value="google">Google</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-text-muted/70 mb-1">Model</label>
+                  <label className="block text-xs text-text-muted/70 mb-1">{text('模型', 'Model')}</label>
                   <input
                     type="text"
                     value={vModel}
                     onChange={(e) => setVModel(e.target.value)}
-                    placeholder="e.g. gpt-4o"
+                    placeholder={text('例如 gpt-4o', 'For example gpt-4o')}
                     className={inputClass}
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs text-text-muted/70 mb-1">Base URL <span className="text-text-muted/40">(optional)</span></label>
+                <label className="block text-xs text-text-muted/70 mb-1">Base URL <span className="text-text-muted/40">{text('（可选）', '(optional)')}</span></label>
                 <input
                   type="text"
                   value={vBaseUrl}
@@ -196,13 +198,13 @@ export function ChannelConfigModal({ channel, onClose, onSaved }: ChannelConfigM
                 />
                 {vModelProvider === 'anthropic' && (
                   <p className="mt-1 text-xs text-text-muted/60">
-                    Anthropic-compatible APIs: URL must end with <code className="font-mono">/v1</code> — e.g. <code className="font-mono">https://example.com/anthropic/v1</code>
+                    {text('Anthropic 兼容接口：URL 必须以 ', 'Anthropic-compatible endpoint: URL must end with ')}<code className="font-mono">/v1</code>{text(' 结尾，例如 ', ', for example ')}<code className="font-mono">https://example.com/anthropic/v1</code>
                   </p>
                 )}
               </div>
 
               <div>
-                <label className="block text-xs text-text-muted/70 mb-1">API Key <span className="text-text-muted/40">(optional, overrides global)</span></label>
+                <label className="block text-xs text-text-muted/70 mb-1">API Key <span className="text-text-muted/40">{text('（可选，会覆盖全局设置）', '(optional, overrides global setting)')}</span></label>
                 <input
                   type="password"
                   value={vApiKey}
@@ -217,45 +219,45 @@ export function ChannelConfigModal({ channel, onClose, onSaved }: ChannelConfigM
           {/* Agent SDK config — only when provider is agent-sdk */}
           {showAgentSdkConfig && (
             <div className="rounded-lg border border-border/50 bg-bg-secondary/30 p-3 space-y-3">
-              <p className="text-xs font-medium text-text-muted">Claude Override</p>
+              <p className="text-xs font-medium text-text-muted">{text('Claude 覆盖配置', 'Claude override settings')}</p>
 
               <div>
-                <label className="block text-xs text-text-muted/70 mb-1">Login Method</label>
+                <label className="block text-xs text-text-muted/70 mb-1">{text('登录方式', 'Login method')}</label>
                 <select
                   value={aLoginMethod}
                   onChange={(e) => setALoginMethod((e.target.value || '') as LoginMethod | '')}
                   className={inputClass}
                 >
-                  <option value="">Default (global)</option>
+                  <option value="">{text('默认（全局）', 'Default (global)')}</option>
                   <option value="api-key">API Key</option>
                   <option value="claudeai">Claude Pro/Max</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-xs text-text-muted/70 mb-1">Model</label>
+                <label className="block text-xs text-text-muted/70 mb-1">{text('模型', 'Model')}</label>
                 <input
                   type="text"
                   value={aModel}
                   onChange={(e) => setAModel(e.target.value)}
-                  placeholder="e.g. claude-opus-4-6"
+                  placeholder={text('例如 claude-opus-4-6', 'For example claude-opus-4-6')}
                   className={inputClass}
                 />
               </div>
 
               <div>
-                <label className="block text-xs text-text-muted/70 mb-1">Base URL <span className="text-text-muted/40">(optional)</span></label>
+                <label className="block text-xs text-text-muted/70 mb-1">Base URL <span className="text-text-muted/40">{text('（可选）', '(optional)')}</span></label>
                 <input
                   type="text"
                   value={aBaseUrl}
                   onChange={(e) => setABaseUrl(e.target.value)}
-                  placeholder="Leave empty for default"
+                  placeholder={text('留空使用默认值', 'Leave empty to use the default')}
                   className={inputClass}
                 />
               </div>
 
               <div>
-                <label className="block text-xs text-text-muted/70 mb-1">API Key <span className="text-text-muted/40">(optional, overrides global)</span></label>
+                <label className="block text-xs text-text-muted/70 mb-1">API Key <span className="text-text-muted/40">{text('（可选，会覆盖全局设置）', '(optional, overrides global setting)')}</span></label>
                 <input
                   type="password"
                   value={aApiKey}
@@ -270,13 +272,13 @@ export function ChannelConfigModal({ channel, onClose, onSaved }: ChannelConfigM
           {/* Disabled Tools */}
           <div>
             <label className="block text-xs font-medium text-text-muted mb-2">
-              Disabled Tools
+              {text('已禁用工具', 'Disabled tools')}
               {disabledTools.size > 0 && (
-                <span className="ml-2 text-text-muted/60">({disabledTools.size} disabled)</span>
+                <span className="ml-2 text-text-muted/60">{text(`（已禁用 ${disabledTools.size} 个）`, `(${disabledTools.size} disabled)`)}</span>
               )}
             </label>
             {tools.length === 0 ? (
-              <p className="text-xs text-text-muted">Loading tools...</p>
+              <p className="text-xs text-text-muted">{text('正在加载工具...', 'Loading tools...')}</p>
             ) : (
               <div className="space-y-3 max-h-48 overflow-y-auto">
                 {Object.entries(toolGroups).map(([group, groupTools]) => (
@@ -316,14 +318,14 @@ export function ChannelConfigModal({ channel, onClose, onSaved }: ChannelConfigM
               onClick={onClose}
               className="text-sm px-3 py-1.5 rounded-lg text-text-muted hover:text-text transition-colors"
             >
-              Cancel
+              取消
             </button>
             <button
               onClick={handleSave}
               disabled={saving}
               className="btn-primary"
             >
-              {saving ? 'Saving...' : 'Save'}
+              {saving ? '保存中...' : '保存'}
             </button>
           </div>
         </div>

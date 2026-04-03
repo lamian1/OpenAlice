@@ -5,6 +5,7 @@ import { ConfigSection, Field, inputClass } from '../components/form'
 import { Toggle } from '../components/Toggle'
 import { useConfigPage } from '../hooks/useConfigPage'
 import { PageHeader } from '../components/PageHeader'
+import { useI18n } from '../i18n'
 
 type MarketDataConfig = Record<string, unknown>
 
@@ -16,10 +17,10 @@ const PROVIDER_OPTIONS: Record<string, string[]> = {
   currency: ['yfinance', 'fmp', 'tiingo'],
 }
 
-const ASSET_LABELS: Record<string, string> = {
-  equity: 'Equity',
-  crypto: 'Crypto',
-  currency: 'Currency',
+const ASSET_LABELS: Record<string, { zh: string; en: string }> = {
+  equity: { zh: '股票', en: 'Equities' },
+  crypto: { zh: '加密', en: 'Crypto' },
+  currency: { zh: '外汇', en: 'FX' },
 }
 
 /** Maps provider name → providerKeys key. null means free, no key required. */
@@ -53,6 +54,7 @@ function TestButton({
   disabled: boolean
   onClick: () => void
 }) {
+  const { text } = useI18n()
   return (
     <button
       onClick={onClick}
@@ -65,7 +67,7 @@ function TestButton({
             : 'border-border text-text-muted hover:bg-bg-tertiary hover:text-text'
       }`}
     >
-      {status === 'testing' ? '…' : status === 'ok' ? 'OK' : status === 'error' ? 'Fail' : 'Test'}
+      {status === 'testing' ? '…' : status === 'ok' ? text('成功', 'OK') : status === 'error' ? text('失败', 'Failed') : text('测试', 'Test')}
     </button>
   )
 }
@@ -73,6 +75,7 @@ function TestButton({
 // ==================== Page ====================
 
 export function MarketDataPage() {
+  const { text } = useI18n()
   const { config, status, loadError, updateConfig, updateConfigImmediate, retry } = useConfigPage<MarketDataConfig>({
     section: 'marketData',
     extract: (full: AppConfig) => (full as Record<string, unknown>).marketData as MarketDataConfig,
@@ -83,9 +86,9 @@ export function MarketDataPage() {
   if (!config) {
     return (
       <div className="flex flex-col flex-1 min-h-0">
-        <PageHeader title="Market Data" description="Structured financial data — prices, fundamentals, macro indicators." />
+        <PageHeader title={text('行情数据', 'Market data')} description={text('结构化金融数据，包括价格、基本面与宏观指标。', 'Structured financial data including prices, fundamentals, and macro indicators.')} />
         <div className="flex-1 flex items-center justify-center">
-          <p className="text-[13px] text-text-muted">Loading…</p>
+          <p className="text-[13px] text-text-muted">{text('加载中…', 'Loading...')}</p>
         </div>
       </div>
     )
@@ -114,8 +117,8 @@ export function MarketDataPage() {
   return (
     <div className="flex flex-col flex-1 min-h-0">
       <PageHeader
-        title="Market Data"
-        description="Structured financial data — prices, fundamentals, macro indicators."
+        title={text('行情数据', 'Market data')}
+        description={text('结构化金融数据，包括价格、基本面与宏观指标。', 'Structured financial data including prices, fundamentals, and macro indicators.')}
         right={
           <div className="flex items-center gap-3">
             <SaveIndicator status={status} onRetry={retry} />
@@ -144,14 +147,14 @@ export function MarketDataPage() {
 
           {/* Embedded API Server */}
           <ConfigSection
-            title="Embedded API Server"
-            description="Expose an OpenBB-compatible HTTP API from Alice. Other services can connect to query market data."
+            title={text('内置 API 服务', 'Embedded API service')}
+            description={text('从 Alice 暴露兼容 OpenBB 的 HTTP API，供其他服务查询行情数据。', 'Expose an OpenBB-compatible HTTP API from Alice for other services to query market data.')}
           >
             <div className="flex items-center justify-between mb-3">
               <div>
-                <p className="text-[13px] text-text">Enable HTTP server</p>
+                <p className="text-[13px] text-text">{text('启用 HTTP 服务', 'Enable HTTP service')}</p>
                 <p className="text-[12px] text-text-muted/60 mt-0.5">
-                  Serves at <span className="font-mono text-[11px]">http://localhost:{apiServer.port}</span>
+                  {text('服务地址 ', 'Service URL ')}<span className="font-mono text-[11px]">http://localhost:{apiServer.port}</span>
                 </p>
               </div>
               <Toggle
@@ -161,7 +164,7 @@ export function MarketDataPage() {
               />
             </div>
             {apiServer.enabled && (
-              <Field label="Port">
+              <Field label={text('端口', 'Port')}>
                 <input
                   className={`${inputClass} w-28`}
                   type="number"
@@ -180,7 +183,7 @@ export function MarketDataPage() {
             onKeyChange={handleKeyChange}
           />
         </div>
-        {loadError && <p className="text-[13px] text-red mt-4 max-w-[880px] mx-auto">Failed to load configuration.</p>}
+        {loadError && <p className="text-[13px] text-red mt-4 max-w-[880px] mx-auto">{text('加载配置失败。', 'Failed to load configuration.')}</p>}
       </div>
     </div>
   )
@@ -199,6 +202,7 @@ function DataBackendSection({
   onBackendChange: (backend: string) => void
   onApiUrlChange: (url: string) => void
 }) {
+  const { text } = useI18n()
   const [testing, setTesting] = useState(false)
   const [testStatus, setTestStatus] = useState<'idle' | 'ok' | 'error'>('idle')
 
@@ -217,8 +221,8 @@ function DataBackendSection({
 
   return (
     <ConfigSection
-      title="Data Backend"
-      description="Choose between the built-in TypeBB engine or an external OpenBB-compatible API."
+      title={text('数据后端', 'Data backend')}
+      description={text('在内置 TypeBB 引擎与外部兼容 OpenBB 的 API 之间进行选择。', 'Choose between the built-in TypeBB engine and an external OpenBB-compatible API.')}
     >
       <div className="flex border border-border rounded-lg overflow-hidden w-fit mb-3">
         {(['typebb-sdk', 'openbb-api'] as const).map((opt, i) => (
@@ -233,14 +237,14 @@ function DataBackendSection({
                 : 'text-text-muted hover:text-text'
             }`}
           >
-            {opt === 'typebb-sdk' ? 'Built-in Engine (TypeBB)' : 'External OpenBB API'}
+            {opt === 'typebb-sdk' ? text('内置引擎（TypeBB）', 'Built-in engine (TypeBB)') : text('外部 OpenBB API', 'External OpenBB API')}
           </button>
         ))}
       </div>
       <p className="text-[13px] text-text-muted/70">
         {backend === 'typebb-sdk'
-          ? 'Uses the built-in TypeBB engine. No external process required.'
-          : 'Connects to an external OpenBB-compatible HTTP endpoint.'}
+          ? text('使用内置 TypeBB 引擎，无需额外进程。', 'Use the built-in TypeBB engine with no extra process.')
+          : text('连接到外部兼容 OpenBB 的 HTTP 端点。', 'Connect to an external OpenBB-compatible HTTP endpoint.')}
       </p>
 
       {backend === 'openbb-api' && (
@@ -264,7 +268,7 @@ function DataBackendSection({
                       : 'border-border text-text-muted hover:bg-bg-tertiary hover:text-text'
                 }`}
               >
-                {testing ? 'Testing…' : testStatus === 'ok' ? 'Connected' : testStatus === 'error' ? 'Failed' : 'Test'}
+                {testing ? text('测试中…', 'Testing...') : testStatus === 'ok' ? text('已连接', 'Connected') : testStatus === 'error' ? text('失败', 'Failed') : text('测试', 'Test')}
               </button>
             </div>
           </Field>
@@ -282,6 +286,7 @@ function AssetProvidersSection({
   onProviderChange,
   onKeyChange,
 }: AssetProviderGridProps) {
+  const { text } = useI18n()
   const [localKeys, setLocalKeys] = useState<Record<string, string>>(() => ({ ...providerKeys }))
   const [testStatus, setTestStatus] = useState<Record<string, 'idle' | 'testing' | 'ok' | 'error'>>({})
 
@@ -305,8 +310,8 @@ function AssetProvidersSection({
 
   return (
     <ConfigSection
-      title="Asset Providers"
-      description="Select a data provider for each asset class. Providers requiring an API key show a key input and test button."
+      title={text('资产数据提供方', 'Asset data providers')}
+      description={text('为每个资产类别选择数据提供方。需要 API Key 的提供方会显示 Key 输入框与测试按钮。', 'Choose a data provider for each asset class. Providers requiring an API key will show a key field and test button.')}
     >
       <div className="space-y-3">
         {Object.entries(PROVIDER_OPTIONS).map(([asset, options]) => {
@@ -316,7 +321,7 @@ function AssetProvidersSection({
 
           return (
             <div key={asset} className="flex items-center gap-3">
-              <span className="text-[13px] text-text w-20 shrink-0 font-medium">{ASSET_LABELS[asset]}</span>
+              <span className="text-[13px] text-text w-20 shrink-0 font-medium">{text(ASSET_LABELS[asset].zh, ASSET_LABELS[asset].en)}</span>
               <select
                 className={`${inputClass} max-w-[160px]`}
                 value={selectedProvider}
@@ -331,7 +336,7 @@ function AssetProvidersSection({
                     type="password"
                     value={localKeys[keyName] || ''}
                     onChange={(e) => handleKeyChange(keyName, e.target.value)}
-                    placeholder="API key"
+                    placeholder="API Key"
                   />
                   <TestButton
                     status={status}
@@ -340,7 +345,7 @@ function AssetProvidersSection({
                   />
                 </>
               ) : (
-                <span className="text-[13px] text-text-muted/50 px-1">Free</span>
+                <span className="text-[13px] text-text-muted/50 px-1">{text('免费', 'Free')}</span>
               )}
             </div>
           )
@@ -366,6 +371,7 @@ function UtilityProvidersSection({
   providerKeys: Record<string, string>
   onKeyChange: (keyName: string, value: string) => void
 }) {
+  const { text } = useI18n()
   const [localKeys, setLocalKeys] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {}
     for (const p of UTILITY_PROVIDERS) init[p.key] = providerKeys[p.key] || ''
@@ -393,8 +399,8 @@ function UtilityProvidersSection({
 
   return (
     <ConfigSection
-      title="Macro & Utility Providers"
-      description="Used by dedicated macro endpoints — FRED for CPI/GDP, BLS for employment, EIA for energy. Not per-asset-class selectable."
+      title={text('宏观与工具型提供方', 'Macro and utility providers')}
+      description={text('供专用宏观接口使用，例如 FRED 的 CPI/GDP、BLS 的就业数据、EIA 的能源数据。不支持按资产类别选择。', 'Used for dedicated macro endpoints such as FRED CPI/GDP, BLS employment data, and EIA energy data. Not selected by asset class.')}
     >
       <div className="space-y-4">
         {UTILITY_PROVIDERS.map(({ key, name, desc, hint }) => {
@@ -408,7 +414,7 @@ function UtilityProvidersSection({
                   type="password"
                   value={localKeys[key]}
                   onChange={(e) => handleKeyChange(key, e.target.value)}
-                  placeholder="Not configured"
+                  placeholder={text('未配置', 'Not configured')}
                 />
                 <TestButton
                   status={status}

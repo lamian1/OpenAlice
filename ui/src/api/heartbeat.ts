@@ -1,9 +1,10 @@
 import { headers } from './client'
+import { translateErrorMessage } from '../i18n'
 
 export const heartbeatApi = {
   async status(): Promise<{ enabled: boolean }> {
     const res = await fetch('/api/heartbeat/status')
-    if (!res.ok) throw new Error('Failed to get heartbeat status')
+    if (!res.ok) throw new Error(translateErrorMessage('Failed to get heartbeat status'))
     return res.json()
   },
 
@@ -11,7 +12,7 @@ export const heartbeatApi = {
     const res = await fetch('/api/heartbeat/trigger', { method: 'POST' })
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: 'Trigger failed' }))
-      throw new Error(err.error || 'Trigger failed')
+      throw new Error(translateErrorMessage(err.error || 'Trigger failed'))
     }
   },
 
@@ -23,14 +24,14 @@ export const heartbeatApi = {
     })
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: 'Update failed' }))
-      throw new Error(err.error || 'Update failed')
+      throw new Error(translateErrorMessage(err.error || 'Update failed'))
     }
     return res.json()
   },
 
   async getPromptFile(): Promise<{ content: string; path: string }> {
     const res = await fetch('/api/heartbeat/prompt-file')
-    if (!res.ok) throw new Error('Failed to load prompt file')
+    if (!res.ok) throw new Error(translateErrorMessage('Failed to load prompt file'))
     return res.json()
   },
 
@@ -40,6 +41,6 @@ export const heartbeatApi = {
       headers,
       body: JSON.stringify({ content }),
     })
-    if (!res.ok) throw new Error('Failed to save prompt file')
+    if (!res.ok) throw new Error(translateErrorMessage('Failed to save prompt file'))
   },
 }

@@ -2,20 +2,17 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { api, type ToolCallRecord } from '../api'
 import { useSSE } from '../hooks/useSSE'
 import { PageHeader } from '../components/PageHeader'
+import { formatDuration as formatZhDuration, formatShortDateTime } from '../utils/locale'
+import { useI18n } from '../i18n'
 
 // ==================== Helpers ====================
 
 function formatDateTime(ts: number): string {
-  const d = new Date(ts)
-  const date = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  const time = d.toLocaleTimeString('en-US', { hour12: false })
-  return `${date} ${time}`
+  return formatShortDateTime(ts)
 }
 
 function formatDuration(ms: number): string {
-  if (ms < 1000) return `${ms}ms`
-  if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`
-  return `${(ms / 60_000).toFixed(1)}m`
+  return formatZhDuration(ms)
 }
 
 function statusColor(status: string): string {
@@ -27,6 +24,7 @@ function statusColor(status: string): string {
 const PAGE_SIZE = 100
 
 export function AgentStatusPage() {
+  const { text, translateError } = useI18n()
   const [entries, setEntries] = useState<ToolCallRecord[]>([])
   const [nameFilter, setNameFilter] = useState('')
   const [paused, setPaused] = useState(false)
@@ -50,7 +48,7 @@ export function AgentStatusPage() {
       setTotalPages(result.totalPages)
       setTotal(result.total)
     } catch (err) {
-      console.warn('Failed to load tool calls:', err)
+      console.warn('Failed to load tool calls:', translateError(err instanceof Error ? err.message : 'Failed to load tool calls'))
     } finally {
       setLoading(false)
     }
@@ -100,7 +98,7 @@ export function AgentStatusPage() {
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      <PageHeader title="Agent Status" />
+      <PageHeader title={text('智能体状态', 'Agent status')} />
 
       <div className="flex-1 flex flex-col min-h-0 px-4 md:px-6 py-5">
         <div className="flex flex-col gap-3 h-full">
@@ -111,7 +109,7 @@ export function AgentStatusPage() {
               onChange={(e) => handleNameChange(e.target.value)}
               className="bg-bg-tertiary text-text text-sm rounded-md border border-border px-2 py-1.5 outline-none focus:border-accent"
             >
-              <option value="">All tools</option>
+              <option value="">{text('全部工具', 'All tools')}</option>
               {toolNames.map((n) => (
                 <option key={n} value={n}>{n}</option>
               ))}
@@ -125,15 +123,15 @@ export function AgentStatusPage() {
                   : 'border-border text-text-muted hover:bg-bg-tertiary'
               }`}
             >
-              {paused ? 'Resume' : 'Pause'}
+              {paused ? text('继续', 'Resume') : text('暂停', 'Pause')}
             </button>
 
             <span className="text-xs text-text-muted ml-auto">
               {total > 0
-                ? `Page ${page} of ${totalPages} \u00b7 ${total} calls`
-                : '0 calls'
+                ? text(`第 ${page} / ${totalPages} 页 · 共 ${total} 次调用`, `Page ${page} / ${totalPages} · ${total} calls total`)
+                : text('0 次调用', '0 calls')
               }
-              {nameFilter && ' (filtered)'}
+              {nameFilter && text('（已筛选）', ' (filtered)')}
             </span>
           </div>
 
@@ -143,19 +141,19 @@ export function AgentStatusPage() {
             className="flex-1 min-h-0 bg-bg rounded-lg border border-border overflow-y-auto font-mono text-xs"
           >
             {loading && entries.length === 0 ? (
-              <div className="px-4 py-8 text-center text-text-muted">Loading...</div>
+              <div className="px-4 py-8 text-center text-text-muted">{text('加载中...', 'Loading...')}</div>
             ) : entries.length === 0 ? (
-              <div className="px-4 py-8 text-center text-text-muted">No tool calls yet</div>
+              <div className="px-4 py-8 text-center text-text-muted">{text('暂无工具调用', 'No tool calls yet')}</div>
             ) : (
               <table className="w-full">
                 <thead className="sticky top-0 bg-bg-secondary">
                   <tr className="text-text-muted text-left">
                     <th className="px-3 py-2 w-12">#</th>
-                    <th className="px-3 py-2 w-36">Time</th>
-                    <th className="px-3 py-2 w-48">Tool</th>
-                    <th className="px-3 py-2 w-20 text-right">Duration</th>
-                    <th className="px-3 py-2 w-16 text-center">Status</th>
-                    <th className="px-3 py-2">Input</th>
+                    <th className="px-3 py-2 w-36">{text('时间', 'Time')}</th>
+                    <th className="px-3 py-2 w-48">{text('工具', 'Tool')}</th>
+                    <th className="px-3 py-2 w-20 text-right">{text('耗时', 'Duration')}</th>
+                    <th className="px-3 py-2 w-16 text-center">{text('状态', 'Status')}</th>
+                    <th className="px-3 py-2">{text('输入', 'Input')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -212,6 +210,7 @@ export function AgentStatusPage() {
 // ==================== Row ====================
 
 function ToolCallRow({ record }: { record: ToolCallRecord }) {
+  const { text } = useI18n()
   const [expanded, setExpanded] = useState(false)
   const inputStr = JSON.stringify(record.input)
   const inputPreview = inputStr.length > 100 ? inputStr.slice(0, 100) + '...' : inputStr
@@ -236,13 +235,13 @@ function ToolCallRow({ record }: { record: ToolCallRecord }) {
         <tr className="border-t border-border/30">
           <td colSpan={6} className="px-3 py-2 space-y-2">
             <div>
-              <span className="text-text-muted text-[11px] uppercase tracking-wide">Input</span>
+              <span className="text-text-muted text-[11px] uppercase tracking-wide">{text('输入', 'Input')}</span>
               <pre className="text-text-muted whitespace-pre-wrap break-all bg-bg-tertiary rounded p-2 text-[11px] mt-1">
                 {JSON.stringify(record.input, null, 2)}
               </pre>
             </div>
             <div>
-              <span className="text-text-muted text-[11px] uppercase tracking-wide">Output</span>
+              <span className="text-text-muted text-[11px] uppercase tracking-wide">{text('输出', 'Output')}</span>
               <pre className="text-text-muted whitespace-pre-wrap break-all bg-bg-tertiary rounded p-2 text-[11px] mt-1 max-h-64 overflow-y-auto">
                 {formatOutput(record.output)}
               </pre>

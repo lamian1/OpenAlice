@@ -10,6 +10,7 @@ import { useAccountHealth } from '../hooks/useAccountHealth'
 import { PageHeader } from '../components/PageHeader'
 import { api } from '../api'
 import type { AccountConfig, BrokerTypeInfo, BrokerConfigField, BrokerHealthInfo } from '../api/types'
+import { useI18n } from '../i18n'
 
 // ==================== Dialog state ====================
 
@@ -21,6 +22,7 @@ type DialogState =
 // ==================== Page ====================
 
 export function TradingPage() {
+  const { text } = useI18n()
   const tc = useTradingConfig()
   const healthMap = useAccountHealth()
   const [dialog, setDialog] = useState<DialogState>(null)
@@ -37,12 +39,12 @@ export function TradingPage() {
     }
   }, [tc.accounts, dialog])
 
-  if (tc.loading) return <PageShell subtitle="Loading..." />
+  if (tc.loading) return <PageShell subtitle={text('加载中...', 'Loading...')} />
   if (tc.error) {
     return (
-      <PageShell subtitle="Failed to load trading configuration.">
+      <PageShell subtitle={text('加载交易配置失败。', 'Failed to load trading configuration.')}>
         <p className="text-[13px] text-red">{tc.error}</p>
-        <button onClick={tc.refresh} className="mt-2 btn-secondary">Retry</button>
+        <button onClick={tc.refresh} className="mt-2 btn-secondary">{text('重试', 'Retry')}</button>
       </PageShell>
     )
   }
@@ -54,7 +56,7 @@ export function TradingPage() {
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      <PageHeader title="Trading" description="Configure your trading accounts." />
+      <PageHeader title={text('交易', 'Trading')} description={text('配置你的交易账户。', 'Configure your trading accounts.')} />
 
       <div className="flex-1 overflow-y-auto px-4 md:px-6 py-5">
         <div className="max-w-[720px] space-y-3">
@@ -75,7 +77,7 @@ export function TradingPage() {
                 onClick={() => setDialog({ kind: 'add' })}
                 className="w-full py-2.5 text-[12px] text-text-muted hover:text-text border border-dashed border-border hover:border-text-muted/40 rounded-lg transition-colors"
               >
-                + Add Account
+                {text('+ 添加账户', '+ Add account')}
               </button>
             </>
           )}
@@ -91,7 +93,7 @@ export function TradingPage() {
             await tc.saveAccount(account)
             const result = await tc.reconnectAccount(account.id)
             if (!result.success) {
-              throw new Error(result.error || 'Connection failed')
+              throw new Error(result.error || text('连接失败', 'Connection failed'))
             }
             setDialog(null)
           }}
@@ -121,9 +123,10 @@ export function TradingPage() {
 // ==================== Page Shell ====================
 
 function PageShell({ subtitle, children }: { subtitle: string; children?: React.ReactNode }) {
+  const { text } = useI18n()
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      <PageHeader title="Trading" description={subtitle} />
+      <PageHeader title={text('交易', 'Trading')} description={subtitle} />
       <div className="flex-1 overflow-y-auto px-4 md:px-6 py-5">{children}</div>
     </div>
   )
@@ -132,14 +135,15 @@ function PageShell({ subtitle, children }: { subtitle: string; children?: React.
 // ==================== Empty State ====================
 
 function EmptyState({ onAdd }: { onAdd: () => void }) {
+  const { text } = useI18n()
   return (
     <div className="rounded-xl border border-dashed border-border p-12 text-center">
-      <h3 className="text-[16px] font-semibold text-text mb-2">No trading accounts</h3>
+      <h3 className="text-[16px] font-semibold text-text mb-2">{text('没有交易账户', 'No trading accounts')}</h3>
       <p className="text-[13px] text-text-muted mb-6 max-w-[320px] mx-auto leading-relaxed">
-        Connect a crypto exchange or brokerage account to start automated trading.
+        {text('连接加密交易所或券商账户，开始自动化交易。', 'Connect an exchange or brokerage account to start automated trading.')}
       </p>
       <button onClick={onAdd} className="btn-primary">
-        + Add Account
+        {text('+ 添加账户', '+ Add account')}
       </button>
     </div>
   )
@@ -174,6 +178,7 @@ function Dialog({ onClose, width, children }: {
 // ==================== Health Badge ====================
 
 function HealthBadge({ health, size = 'sm' }: { health?: BrokerHealthInfo; size?: 'sm' | 'md' }) {
+  const { text } = useI18n()
   const textSize = size === 'md' ? 'text-[12px]' : 'text-[11px]'
   const dotSize = size === 'md' ? 'w-2 h-2' : 'w-1.5 h-1.5'
 
@@ -183,7 +188,7 @@ function HealthBadge({ health, size = 'sm' }: { health?: BrokerHealthInfo; size?
     return (
       <span className={`inline-flex items-center gap-1.5 ${textSize} text-text-muted`} title={health.lastError}>
         <span className={`${dotSize} rounded-full bg-text-muted/40 shrink-0`} />
-        Disabled
+        {text('已禁用', 'Disabled')}
       </span>
     )
   }
@@ -193,21 +198,21 @@ function HealthBadge({ health, size = 'sm' }: { health?: BrokerHealthInfo; size?
       return (
         <span className={`inline-flex items-center gap-1.5 ${textSize} text-green`}>
           <span className={`${dotSize} rounded-full bg-green shrink-0`} />
-          Connected
+          {text('已连接', 'Connected')}
         </span>
       )
     case 'degraded':
       return (
         <span className={`inline-flex items-center gap-1.5 ${textSize} text-yellow-400`}>
           <span className={`${dotSize} rounded-full bg-yellow-400 shrink-0`} />
-          Unstable
+          {text('不稳定', 'Degraded')}
         </span>
       )
     case 'offline':
       return (
         <span className={`inline-flex items-center gap-1.5 ${textSize} text-red`} title={health.lastError}>
           <span className={`${dotSize} rounded-full bg-red shrink-0 animate-pulse`} />
-          {health.recovering ? 'Reconnecting...' : 'Offline'}
+          {health.recovering ? text('重连中...', 'Reconnecting...') : text('离线', 'Offline')}
         </span>
       )
   }
@@ -239,6 +244,7 @@ function AccountCard({ account, brokerType, health, onClick }: {
   health?: BrokerHealthInfo
   onClick: () => void
 }) {
+  const { text } = useI18n()
   const isDisabled = health?.disabled || account.enabled === false
   const badge = brokerType
     ? { text: brokerType.badge, color: `${brokerType.badgeColor} ${brokerType.badgeColor.replace('text-', 'bg-')}/10` }
@@ -257,12 +263,12 @@ function AccountCard({ account, brokerType, health, onClick }: {
           <div className="text-[13px] font-medium text-text truncate">{account.id}</div>
           <div className="text-[11px] text-text-muted truncate mt-0.5">
             {buildSubtitle(account, brokerType)}
-            {account.guards.length > 0 && <span className="ml-2 text-text-muted/50">{account.guards.length} guard{account.guards.length > 1 ? 's' : ''}</span>}
+            {account.guards.length > 0 && <span className="ml-2 text-text-muted/50">{text(`${account.guards.length} 个守卫`, `${account.guards.length} guard${account.guards.length > 1 ? 's' : ''}`)}</span>}
           </div>
         </div>
         <div className="shrink-0">
           {account.enabled === false
-            ? <span className="text-[11px] text-text-muted">Disabled</span>
+            ? <span className="text-[11px] text-text-muted">{text('已禁用', 'Disabled')}</span>
             : <HealthBadge health={health} />
           }
         </div>
@@ -279,6 +285,7 @@ function DynamicBrokerFields({ fields, values, showSecrets, onChange }: {
   showSecrets: boolean
   onChange: (field: string, value: unknown) => void
 }) {
+  const { text } = useI18n()
   return (
     <div className="space-y-3">
       {fields.map((f) => {
@@ -317,7 +324,7 @@ function DynamicBrokerFields({ fields, values, showSecrets, onChange }: {
                   type={f.sensitive && !showSecrets ? 'password' : 'text'}
                   value={String(values[f.name] ?? f.default ?? '')}
                   onChange={(e) => onChange(f.name, e.target.value)}
-                  placeholder={f.placeholder || (f.required ? 'Required' : '')}
+                  placeholder={f.placeholder || (f.required ? text('必填', 'Required') : '')}
                 />
               </Field>
             )
@@ -350,6 +357,7 @@ function CreateWizard({ brokerTypes, existingAccountIds, onSave, onClose }: {
   onSave: (account: AccountConfig) => Promise<void>
   onClose: () => void
 }) {
+  const { text, translateError } = useI18n()
   const [step, setStep] = useState(1)
   const [type, setType] = useState<string | null>(null)
   const [id, setId] = useState('')
@@ -389,7 +397,7 @@ function CreateWizard({ brokerTypes, existingAccountIds, onSave, onClose }: {
   const handleNext = () => {
     if (!type) return
     if (existingAccountIds.includes(finalId)) {
-      setError(`Account "${finalId}" already exists`)
+      setError(text(`账户“${finalId}”已存在`, `Account "${finalId}" already exists`))
       return
     }
     setError('')
@@ -407,14 +415,14 @@ function CreateWizard({ brokerTypes, existingAccountIds, onSave, onClose }: {
 
       const testResult = await api.trading.testConnection(account)
       if (!testResult.success) {
-        setError(testResult.error || 'Connection failed')
+        setError(translateError(testResult.error || text('连接失败', 'Connection failed')))
         setSaving(false)
         return
       }
 
       await onSave(account)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create account')
+      setError(err instanceof Error ? translateError(err.message) : text('创建账户失败', 'Failed to create account'))
       setSaving(false)
     }
   }
@@ -428,7 +436,7 @@ function CreateWizard({ brokerTypes, existingAccountIds, onSave, onClose }: {
       {/* Header */}
       <div className="shrink-0 px-6 py-4 border-b border-border">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-[14px] font-semibold text-text">New Account</h3>
+          <h3 className="text-[14px] font-semibold text-text">{text('新建账户', 'Create account')}</h3>
           <button onClick={onClose} className="text-text-muted hover:text-text p-1 transition-colors">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <path d="M18 6L6 18M6 6l12 12" />
@@ -443,14 +451,14 @@ function CreateWizard({ brokerTypes, existingAccountIds, onSave, onClose }: {
         {step === 1 && (
           <div className="space-y-5">
             <div>
-              <p className="text-[12px] font-medium text-text-muted uppercase tracking-wide mb-3">Platform</p>
+              <p className="text-[12px] font-medium text-text-muted uppercase tracking-wide mb-3">{text('平台', 'Platform')}</p>
               <SDKSelector options={platformOptions} selected={type ?? ''} onSelect={(t) => setType(t)} />
             </div>
 
             {type && bt && (
               <div className="space-y-3 pt-2 border-t border-border">
-                <p className="text-[12px] font-medium text-text-muted uppercase tracking-wide mb-1">Connection</p>
-                <Field label="Account ID">
+                <p className="text-[12px] font-medium text-text-muted uppercase tracking-wide mb-1">{text('连接', 'Connection')}</p>
+                <Field label={text('账户 ID', 'Account ID')}>
                   <input className={inputClass} value={id} onChange={(e) => setId(e.target.value.trim())} placeholder={defaultId} />
                 </Field>
                 <DynamicBrokerFields
@@ -474,7 +482,7 @@ function CreateWizard({ brokerTypes, existingAccountIds, onSave, onClose }: {
               <span className="text-[13px] text-text-muted">{bt.name}</span>
             </div>
 
-            <p className="text-[12px] font-medium text-text-muted uppercase tracking-wide mb-1">Credentials</p>
+            <p className="text-[12px] font-medium text-text-muted uppercase tracking-wide mb-1">{text('凭证', 'Credentials')}</p>
             <DynamicBrokerFields
               fields={credentialFields}
               values={brokerConfig}
@@ -489,21 +497,21 @@ function CreateWizard({ brokerTypes, existingAccountIds, onSave, onClose }: {
       {/* Footer */}
       <div className="shrink-0 flex items-center justify-between px-6 py-4 border-t border-border">
         <button onClick={step === 1 ? onClose : () => { setStep(1); setError('') }} className="btn-secondary">
-          {step === 1 ? 'Cancel' : 'Back'}
+          {step === 1 ? text('取消', 'Cancel') : text('返回', 'Back')}
         </button>
         {step === 1 && !hasSensitive && type && (
           <button onClick={handleNext} disabled={saving} className="btn-primary">
-            {saving ? 'Connecting...' : 'Create Account'}
+            {saving ? text('连接中...', 'Connecting...') : text('创建账户', 'Create account')}
           </button>
         )}
         {step === 1 && (hasSensitive || !type) && (
           <button onClick={handleNext} disabled={!type} className="btn-primary">
-            Next
+            {text('下一步', 'Next')}
           </button>
         )}
         {step === 2 && (
           <button onClick={handleCreate} disabled={saving || !canCreate} className="btn-primary">
-            {saving ? 'Connecting...' : 'Create Account'}
+            {saving ? text('连接中...', 'Connecting...') : text('创建账户', 'Create account')}
           </button>
         )}
       </div>
@@ -521,6 +529,7 @@ function EditDialog({ account, brokerType, health, onSaveAccount, onDelete, onCl
   onDelete: () => Promise<void>
   onClose: () => void
 }) {
+  const { text, translateError } = useI18n()
   const [draft, setDraft] = useState(account)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
@@ -543,10 +552,10 @@ function EditDialog({ account, brokerType, health, onSaveAccount, onDelete, onCl
     setSaving(true); setMsg('')
     try {
       await onSaveAccount(draft)
-      setMsg('Saved')
+      setMsg(text('已保存', 'Saved'))
       setTimeout(() => setMsg(''), 2000)
     } catch (err) {
-      setMsg(err instanceof Error ? err.message : 'Save failed')
+      setMsg(err instanceof Error ? translateError(err.message) : text('保存失败', 'Save failed'))
     } finally {
       setSaving(false)
     }
@@ -573,9 +582,9 @@ function EditDialog({ account, brokerType, health, onSaveAccount, onDelete, onCl
 
       {/* Body */}
       <div className="flex-1 overflow-y-auto px-6 py-6 space-y-5">
-        <Section title="Configuration">
+        <Section title={text('配置', 'Configuration')}>
           <div className="mb-3">
-            <span className="text-[12px] text-text-muted">Type</span>
+            <span className="text-[12px] text-text-muted">{text('类型', 'Type')}</span>
             <span className="ml-2 text-[12px] font-medium text-text">{brokerType?.name ?? account.type}</span>
           </div>
           <DynamicBrokerFields
@@ -589,7 +598,7 @@ function EditDialog({ account, brokerType, health, onSaveAccount, onDelete, onCl
               onClick={() => setShowKeys(!showKeys)}
               className="text-[11px] text-text-muted hover:text-text transition-colors mt-2"
             >
-              {showKeys ? 'Hide secrets' : 'Show secrets'}
+              {showKeys ? text('隐藏敏感信息', 'Hide sensitive fields') : text('显示敏感信息', 'Show sensitive fields')}
             </button>
           )}
         </Section>
@@ -607,14 +616,14 @@ function EditDialog({ account, brokerType, health, onSaveAccount, onDelete, onCl
             >
               <polyline points="9 18 15 12 9 6" />
             </svg>
-            Guards ({draft.guards.length})
+            {text(`守卫（${draft.guards.length}）`, `Guards (${draft.guards.length})`)}
           </button>
           {guardsOpen && (
             <div className="mt-3">
               <GuardsSection
                 guards={draft.guards}
                 guardTypes={guardTypes}
-                description="Guards validate operations before execution. Order matters."
+                description={text('守卫会在执行前校验操作，顺序会影响执行结果。', 'Guards validate actions before execution. Their order affects the outcome.')}
                 onChange={patchGuards}
                 onChangeImmediate={patchGuards}
               />
@@ -628,7 +637,7 @@ function EditDialog({ account, brokerType, health, onSaveAccount, onDelete, onCl
         <div className="flex items-center gap-3">
           {dirty && (
             <button onClick={handleSave} disabled={saving} className="btn-primary">
-              {saving ? 'Saving...' : 'Save'}
+              {saving ? text('保存中...', 'Saving...') : text('保存', 'Save')}
             </button>
           )}
           {draft.enabled !== false && <ReconnectButton accountId={account.id} />}
@@ -638,12 +647,12 @@ function EditDialog({ account, brokerType, health, onSaveAccount, onDelete, onCl
               setDraft(updated)
               await onSaveAccount(updated)
             }} />
-            <span className="text-[12px] text-text-muted">{draft.enabled !== false ? 'Enabled' : 'Disabled'}</span>
+            <span className="text-[12px] text-text-muted">{draft.enabled !== false ? text('已启用', 'Enabled') : text('已禁用', 'Disabled')}</span>
           </label>
           {msg && <span className="text-[12px] text-text-muted">{msg}</span>}
         </div>
         <div className="flex-1" />
-        <DeleteButton label="Delete Account" onConfirm={onDelete} />
+        <DeleteButton label={text('删除账户', 'Delete account')} onConfirm={onDelete} />
       </div>
     </Dialog>
   )
@@ -652,16 +661,17 @@ function EditDialog({ account, brokerType, health, onSaveAccount, onDelete, onCl
 // ==================== Delete Button ====================
 
 function DeleteButton({ label, onConfirm }: { label: string; onConfirm: () => void }) {
+  const { text } = useI18n()
   const [confirming, setConfirming] = useState(false)
 
   if (confirming) {
     return (
       <div className="flex items-center gap-2">
         <button onClick={() => { onConfirm(); setConfirming(false) }} className="btn-danger">
-          Confirm
+          {text('确认', 'Confirm')}
         </button>
         <button onClick={() => setConfirming(false)} className="btn-secondary">
-          Cancel
+          {text('取消', 'Cancel')}
         </button>
       </div>
     )

@@ -1,6 +1,7 @@
 import { type ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { type Page, ROUTES } from '../App'
+import { useI18n } from '../i18n'
 
 interface SidebarProps {
   sseConnected: boolean
@@ -27,7 +28,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       {
         page: 'chat',
-        label: 'Chat',
+        label: '聊天',
         icon: (active) => (
           <svg width="18" height="18" viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
@@ -36,7 +37,7 @@ const NAV_SECTIONS: NavSection[] = [
       },
       {
         page: 'portfolio',
-        label: 'Portfolio',
+        label: '投资组合',
         icon: (active) => (
           <svg width="18" height="18" viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
@@ -48,7 +49,7 @@ const NAV_SECTIONS: NavSection[] = [
       },
       {
         page: 'events',
-        label: 'Events',
+        label: '事件',
         icon: (active) => (
           <svg width="18" height="18" viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
@@ -58,11 +59,11 @@ const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    sectionLabel: 'Agent',
+    sectionLabel: '智能体',
     items: [
       {
         page: 'agent-status',
-        label: 'Agent Status',
+        label: '智能体状态',
         icon: (active) => (
           <svg width="18" height="18" viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <rect x="4" y="4" width="16" height="16" rx="2" />
@@ -72,7 +73,7 @@ const NAV_SECTIONS: NavSection[] = [
       },
       {
         page: 'heartbeat',
-        label: 'Heartbeat',
+        label: '心跳',
         icon: (active) => (
           <svg width="18" height="18" viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z" />
@@ -82,11 +83,11 @@ const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    sectionLabel: 'Data',
+    sectionLabel: '数据',
     items: [
       {
         page: 'market-data',
-        label: 'Market Data',
+        label: '行情数据',
         icon: (active) => (
           <svg width="18" height="18" viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <ellipse cx="12" cy="5" rx="9" ry="3" />
@@ -97,7 +98,7 @@ const NAV_SECTIONS: NavSection[] = [
       },
       {
         page: 'news',
-        label: 'News',
+        label: '新闻',
         icon: (active) => (
           <svg width="18" height="18" viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2zm0 0a2 2 0 0 1-2-2v-9h4" />
@@ -110,11 +111,11 @@ const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    sectionLabel: 'System',
+    sectionLabel: '系统',
     items: [
       {
         page: 'connectors',
-        label: 'Connectors',
+        label: '连接器',
         icon: (active) => (
           <svg width="18" height="18" viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
@@ -125,7 +126,7 @@ const NAV_SECTIONS: NavSection[] = [
       },
       {
         page: 'tools',
-        label: 'Tools',
+        label: '工具',
         icon: (active) => (
           <svg width="18" height="18" viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
@@ -134,7 +135,7 @@ const NAV_SECTIONS: NavSection[] = [
       },
       {
         page: 'trading' as const,
-        label: 'Trading',
+        label: '交易',
         icon: (active: boolean) => (
           <svg width="18" height="18" viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M2 20h20" />
@@ -147,7 +148,7 @@ const NAV_SECTIONS: NavSection[] = [
       },
       {
         page: 'ai-provider',
-        label: 'AI Provider',
+        label: 'AI 提供方',
         icon: (active) => (
           <svg width="18" height="18" viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73v1.27h1a7 7 0 0 1 7 7h1.27c.34-.6.99-1 1.73-1a2 2 0 1 1 0 4c-.74 0-1.39-.4-1.73-1H21a7 7 0 0 1-7 7v1.27c.6.34 1 .99 1 1.73a2 2 0 1 1-4 0c0-.74.4-1.39 1-1.73V21a7 7 0 0 1-7-7H2.73c-.34.6-.99 1-1.73 1a2 2 0 1 1 0-4c.74 0 1.39.4 1.73 1H4a7 7 0 0 1 7-7V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z" />
@@ -157,7 +158,7 @@ const NAV_SECTIONS: NavSection[] = [
       },
       {
         page: 'settings',
-        label: 'Settings',
+        label: '设置',
         icon: (active) => (
           <svg width="18" height="18" viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="3" />
@@ -167,7 +168,7 @@ const NAV_SECTIONS: NavSection[] = [
       },
       {
         page: 'dev' as const,
-        label: 'Dev',
+        label: '开发',
         icon: (active: boolean) => (
           <svg width="18" height="18" viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="16 18 22 12 16 6" />
@@ -197,6 +198,7 @@ const INDICATOR_STYLE = { background: '#58a6ff' }
 // ==================== Sidebar ====================
 
 export function Sidebar({ sseConnected, open, onClose }: SidebarProps) {
+  const { locale, setLocale, text } = useI18n()
   const location = useLocation()
   const currentPage = pathToPage(location.pathname)
 
@@ -270,7 +272,7 @@ export function Sidebar({ sseConnected, open, onClose }: SidebarProps) {
         </nav>
 
         {/* SSE Connection Status */}
-        <div className="mt-auto px-4 py-3 border-t border-border">
+        <div className="mt-auto px-4 py-3 border-t border-border space-y-3">
           <div className="flex items-center gap-2 text-[12px] text-text-muted">
             <span className="relative flex h-2 w-2">
               {sseConnected ? (
@@ -282,7 +284,28 @@ export function Sidebar({ sseConnected, open, onClose }: SidebarProps) {
                 </>
               )}
             </span>
-            <span>{sseConnected ? 'Connected' : 'Reconnecting...'}</span>
+            <span>{text(sseConnected ? '已连接' : '重连中...', sseConnected ? 'Connected' : 'Reconnecting...')}</span>
+          </div>
+          <div className="space-y-1.5">
+            <p className="text-[11px] font-medium text-text-muted/60 uppercase tracking-wider">
+              {text('界面语言', 'Language')}
+            </p>
+            <div className="flex rounded-lg border border-border overflow-hidden bg-bg">
+              <button
+                type="button"
+                onClick={() => setLocale('zh-CN')}
+                className={`flex-1 px-3 py-1.5 text-xs transition-colors ${locale === 'zh-CN' ? 'bg-accent/15 text-accent font-medium' : 'text-text-muted hover:text-text hover:bg-bg-tertiary'}`}
+              >
+                中文
+              </button>
+              <button
+                type="button"
+                onClick={() => setLocale('en-US')}
+                className={`flex-1 px-3 py-1.5 text-xs border-l border-border transition-colors ${locale === 'en-US' ? 'bg-accent/15 text-accent font-medium' : 'text-text-muted hover:text-text hover:bg-bg-tertiary'}`}
+              >
+                EN
+              </button>
+            </div>
           </div>
         </div>
       </aside>

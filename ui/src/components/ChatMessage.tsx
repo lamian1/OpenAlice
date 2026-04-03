@@ -5,6 +5,8 @@ import { markedHighlight } from 'marked-highlight'
 import hljs from 'highlight.js'
 import DOMPurify from 'dompurify'
 import 'highlight.js/styles/github-dark.min.css'
+import { formatDateTime } from '../utils/locale'
+import { getCurrentLocale } from '../i18n'
 
 const marked = new Marked(
   markedHighlight({
@@ -43,14 +45,19 @@ function AliceAvatar() {
 }
 
 function addCodeBlockWrappers(html: string): string {
+  const locale = getCurrentLocale()
+  const copyText = locale === 'zh-CN' ? '复制' : 'Copy'
+  const copiedText = locale === 'zh-CN' ? '已复制' : 'Copied'
+  const codeLabel = locale === 'zh-CN' ? '代码' : 'Code'
+
   return html.replace(
     /<pre><code class="hljs language-(\w+)">([\s\S]*?)<\/code><\/pre>/g,
     (_, lang, code) =>
-      `<div class="code-block-wrapper"><div class="code-header"><span>${lang}</span><button class="code-copy-btn" data-code>${COPY_ICON} Copy</button></div><pre><code class="hljs language-${lang}">${code}</code></pre></div>`,
+      `<div class="code-block-wrapper"><div class="code-header"><span>${lang}</span><button class="code-copy-btn" data-code data-copy-label="${copyText}" data-copied-label="${copiedText}">${COPY_ICON} ${copyText}</button></div><pre><code class="hljs language-${lang}">${code}</code></pre></div>`,
   ).replace(
     /<pre><code class="hljs">([\s\S]*?)<\/code><\/pre>/g,
     (_, code) =>
-      `<div class="code-block-wrapper"><div class="code-header"><span>code</span><button class="code-copy-btn" data-code>${COPY_ICON} Copy</button></div><pre><code class="hljs">${code}</code></pre></div>`,
+      `<div class="code-block-wrapper"><div class="code-header"><span>${codeLabel}</span><button class="code-copy-btn" data-code data-copy-label="${copyText}" data-copied-label="${copiedText}">${COPY_ICON} ${copyText}</button></div><pre><code class="hljs">${code}</code></pre></div>`,
   )
 }
 
@@ -68,11 +75,13 @@ export function ChatMessage({ role, text, timestamp, isGrouped, media }: ChatMes
     if (!btn) return
     const wrapper = btn.closest('.code-block-wrapper')
     const code = wrapper?.querySelector('code')?.textContent ?? ''
+    const copyLabel = btn.dataset.copyLabel ?? 'Copy'
+    const copiedLabel = btn.dataset.copiedLabel ?? 'Copied'
     navigator.clipboard.writeText(code).then(() => {
-      btn.innerHTML = `${CHECK_ICON} Copied!`
+      btn.innerHTML = `${CHECK_ICON} ${copiedLabel}`
       btn.classList.add('copied')
       setTimeout(() => {
-        btn.innerHTML = `${COPY_ICON} Copy`
+        btn.innerHTML = `${COPY_ICON} ${copyLabel}`
         btn.classList.remove('copied')
       }, 2000)
     })
@@ -95,7 +104,7 @@ export function ChatMessage({ role, text, timestamp, isGrouped, media }: ChatMes
               <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
               <path d="M13.73 21a2 2 0 0 1-3.46 0" />
             </svg>
-            <span className="text-[11px] text-text-muted/60 font-medium">Notification</span>
+            <span className="text-[11px] text-text-muted/60 font-medium">{getCurrentLocale() === 'zh-CN' ? '通知' : 'Notification'}</span>
           </div>
           <div ref={contentRef} className="text-[13px] text-text-muted break-words leading-relaxed">
             <div className="markdown-content" dangerouslySetInnerHTML={{ __html: html! }} />
@@ -116,7 +125,7 @@ export function ChatMessage({ role, text, timestamp, isGrouped, media }: ChatMes
         </div>
         {timestamp && (
           <div className="text-[11px] text-text-muted mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            {new Date(timestamp).toLocaleString()}
+            {formatDateTime(timestamp)}
           </div>
         )}
       </div>
@@ -140,7 +149,7 @@ export function ChatMessage({ role, text, timestamp, isGrouped, media }: ChatMes
       </div>
       {timestamp && (
         <div className="text-[11px] text-text-muted mt-1 ml-8 opacity-0 group-hover:opacity-100 transition-opacity">
-          {new Date(timestamp).toLocaleString()}
+          {formatDateTime(timestamp)}
         </div>
       )}
     </div>
@@ -210,7 +219,7 @@ export function ToolCallGroup({ calls, timestamp }: ToolCallGroupProps) {
 
       {timestamp && (
         <div className="text-[11px] text-text-muted mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-          {new Date(timestamp).toLocaleString()}
+          {formatDateTime(timestamp)}
         </div>
       )}
     </div>

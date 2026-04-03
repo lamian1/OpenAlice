@@ -4,8 +4,10 @@ import { SDKSelector, CONNECTOR_OPTIONS } from '../components/SDKSelector'
 import { ConfigSection, Field, inputClass } from '../components/form'
 import { PageHeader } from '../components/PageHeader'
 import type { AppConfig, ConnectorsConfig } from '../api'
+import { COPY, useI18n } from '../i18n'
 
 export function ConnectorsPage() {
+  const { phrase, text } = useI18n()
   const { config, status, loadError, updateConfig, updateConfigImmediate, retry } =
     useConfigPage<ConnectorsConfig>({
       section: 'connectors',
@@ -34,8 +36,8 @@ export function ConnectorsPage() {
   return (
     <div className="flex flex-col flex-1 min-h-0">
       <PageHeader
-        title="Connectors"
-        description="Service ports and external integrations. Changes require a restart."
+        title={phrase(COPY.connectors.title)}
+        description={phrase(COPY.connectors.description)}
         right={<SaveIndicator status={status} onRetry={retry} />}
       />
 
@@ -45,8 +47,8 @@ export function ConnectorsPage() {
           <div className="max-w-[880px] mx-auto">
             {/* Connector selector cards */}
             <ConfigSection
-              title="Active Connectors"
-              description="Select which connectors to enable. Web UI and MCP Server are always active."
+              title={phrase(COPY.connectors.active)}
+              description={phrase(COPY.connectors.activeDescription)}
             >
               <SDKSelector
                 options={CONNECTOR_OPTIONS}
@@ -58,9 +60,9 @@ export function ConnectorsPage() {
             {/* Web UI config — always shown */}
             <ConfigSection
               title="Web UI"
-              description="Browser-based chat and configuration interface."
+              description={phrase(COPY.connectors.webDescription)}
             >
-              <Field label="Port">
+              <Field label={phrase(COPY.common.port)}>
                 <input
                   className={inputClass}
                   type="number"
@@ -73,9 +75,9 @@ export function ConnectorsPage() {
             {/* MCP Server config — always shown */}
             <ConfigSection
               title="MCP Server"
-              description="Tool bridge for Claude Code provider and external AI agents."
+              description={phrase(COPY.connectors.mcpDescription)}
             >
-              <Field label="Port">
+              <Field label={phrase(COPY.common.port)}>
                 <input
                   className={inputClass}
                   type="number"
@@ -89,9 +91,9 @@ export function ConnectorsPage() {
             {config.mcpAsk.enabled && (
               <ConfigSection
                 title="MCP Ask"
-                description="Multi-turn conversation endpoint for external agents."
+                description={phrase(COPY.connectors.mcpAskDescription)}
               >
-                <Field label="Port">
+                <Field label={phrase(COPY.common.port)}>
                   <input
                     className={inputClass}
                     type="number"
@@ -100,7 +102,7 @@ export function ConnectorsPage() {
                       const v = e.target.value
                       updateConfig({ mcpAsk: { ...config.mcpAsk, port: v ? Number(v) : undefined } })
                     }}
-                    placeholder="e.g. 3003"
+                    placeholder={text('例如 3003', 'For example 3003')}
                   />
                 </Field>
               </ConfigSection>
@@ -110,9 +112,9 @@ export function ConnectorsPage() {
             {config.telegram.enabled && (
               <ConfigSection
                 title="Telegram"
-                description="Create a bot via @BotFather, paste the token below, and add your chat ID."
+                description={phrase(COPY.connectors.telegramDescription)}
               >
-                <Field label="Bot Token">
+                <Field label={phrase(COPY.connectors.telegramToken)}>
                   <input
                     className={inputClass}
                     type="password"
@@ -125,7 +127,7 @@ export function ConnectorsPage() {
                     placeholder="123456:ABC-DEF..."
                   />
                 </Field>
-                <Field label="Bot Username">
+                <Field label={phrase(COPY.connectors.telegramUsername)}>
                   <input
                     className={inputClass}
                     value={config.telegram.botUsername ?? ''}
@@ -134,10 +136,10 @@ export function ConnectorsPage() {
                         telegram: { ...config.telegram, botUsername: e.target.value || undefined },
                       })
                     }
-                    placeholder="my_bot"
+                    placeholder={text('my_bot', 'my_bot')}
                   />
                 </Field>
-                <Field label="Allowed Chat IDs">
+                <Field label={phrase(COPY.connectors.telegramChatIds)}>
                   <input
                     className={inputClass}
                     value={config.telegram.chatIds.join(', ')}
@@ -154,14 +156,14 @@ export function ConnectorsPage() {
                         },
                       })
                     }
-                    placeholder="Comma-separated, e.g. 123456, 789012"
+                    placeholder={phrase(COPY.connectors.chatIdsPlaceholder)}
                   />
                 </Field>
               </ConfigSection>
             )}
           </div>
         )}
-        {loadError && <p className="text-[13px] text-red">Failed to load configuration.</p>}
+        {loadError && <p className="text-[13px] text-red">{phrase(COPY.connectors.loadError)}</p>}
       </div>
     </div>
   )

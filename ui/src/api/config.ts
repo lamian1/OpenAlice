@@ -1,10 +1,11 @@
 import { headers } from './client'
 import type { AppConfig } from './types'
+import { translateErrorMessage } from '../i18n'
 
 export const configApi = {
   async load(): Promise<AppConfig> {
     const res = await fetch('/api/config')
-    if (!res.ok) throw new Error('Failed to load config')
+    if (!res.ok) throw new Error(translateErrorMessage('Failed to load config'))
     return res.json()
   },
 
@@ -14,7 +15,7 @@ export const configApi = {
       headers,
       body: JSON.stringify({ backend }),
     })
-    if (!res.ok) throw new Error('Failed to switch backend')
+    if (!res.ok) throw new Error(translateErrorMessage('Failed to switch backend'))
   },
 
   async updateSection(section: string, data: unknown): Promise<unknown> {
@@ -25,7 +26,7 @@ export const configApi = {
     })
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: 'Save failed' }))
-      throw new Error(err.error || 'Save failed')
+      throw new Error(translateErrorMessage(err.error || 'Save failed'))
     }
     return res.json()
   },

@@ -1,3 +1,4 @@
+import { translateErrorMessage } from '../i18n'
 import { fetchJson } from './client'
 import type { TradingAccount, AccountSummary, AccountInfo, Position, WalletCommitLog, ReconnectResult, AccountConfig, WalletStatus, WalletPushResult, WalletRejectResult, TestConnectionResult, BrokerTypeInfo, UTASnapshotSummary, EquityCurvePoint } from './types'
 
@@ -65,7 +66,7 @@ export const tradingApi = {
     })
     if (!res.ok) {
       const body = await res.json().catch(() => ({}))
-      throw new Error(body.error || `Reject failed (${res.status})`)
+      throw new Error(translateErrorMessage(body.error || `Reject failed (${res.status})`))
     }
     return res.json()
   },
@@ -74,7 +75,7 @@ export const tradingApi = {
     const res = await fetch(`/api/trading/accounts/${accountId}/wallet/push`, { method: 'POST' })
     if (!res.ok) {
       const body = await res.json().catch(() => ({}))
-      throw new Error(body.error || `Push failed (${res.status})`)
+      throw new Error(translateErrorMessage(body.error || `Push failed (${res.status})`))
     }
     return res.json()
   },
@@ -99,7 +100,7 @@ export const tradingApi = {
     })
     if (!res.ok) {
       const body = await res.json().catch(() => ({}))
-      throw new Error(body.error || `Failed to save account (${res.status})`)
+      throw new Error(translateErrorMessage(body.error || `Failed to save account (${res.status})`))
     }
     return res.json()
   },
@@ -108,7 +109,7 @@ export const tradingApi = {
     const res = await fetch(`/api/trading/config/accounts/${id}`, { method: 'DELETE' })
     if (!res.ok) {
       const body = await res.json().catch(() => ({}))
-      throw new Error(body.error || `Failed to delete account (${res.status})`)
+      throw new Error(translateErrorMessage(body.error || `Failed to delete account (${res.status})`))
     }
   },
 
