@@ -320,6 +320,7 @@ export function Sidebar({ systemStatus, open, onClose }: SidebarProps) {
   const { locale, setLocale, text } = useI18n()
   const location = useLocation()
   const currentPage = pathToPage(location.pathname)
+  const [indicatorsOpen, setIndicatorsOpen] = useState(true)
   const systemIndicators = systemStatus
     ? [systemStatus.aiProvider, systemStatus.marketData, systemStatus.heartbeat, systemStatus.news]
     : []
@@ -412,9 +413,27 @@ export function Sidebar({ systemStatus, open, onClose }: SidebarProps) {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-[11px] font-medium text-text-muted/60 uppercase tracking-wider">{text('运行状态', 'Runtime status')}</p>
-                <p className="text-[12px] text-text-muted mt-1">{systemStatus?.meta.connectorsReconnecting ? text('连接器正在重载', 'Connectors reloading') : text('按分组查看状态灯', 'Grouped health indicators')}</p>
               </div>
-              {systemStatus?.meta.connectorsReconnecting && <span className="text-[10px] text-yellow-400 shrink-0">{text('重载中', 'Reloading')}</span>}
+              <div className="flex items-center gap-2 shrink-0">
+                {systemStatus?.meta.connectorsReconnecting && <span className="text-[10px] text-yellow-400">{text('重载中', 'Reloading')}</span>}
+                <button
+                  type="button"
+                  onClick={() => setIndicatorsOpen((prev) => !prev)}
+                  className="inline-flex items-center gap-1 rounded-md border border-border/80 bg-bg/70 px-2 py-1 text-[10px] text-text-muted hover:text-text hover:bg-bg-tertiary/40 transition-colors"
+                  aria-label={indicatorsOpen ? text('折叠状态灯', 'Collapse indicators') : text('展开状态灯', 'Expand indicators')}
+                >
+                  <span>{indicatorsOpen ? text('折叠', 'Hide') : text('展开', 'Show')}</span>
+                  <svg
+                    width="10"
+                    height="10"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    className={`transition-transform ${indicatorsOpen ? 'rotate-90' : ''}`}
+                  >
+                    <path d="M4 2.5L8 6L4 9.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+              </div>
             </div>
             <div className="grid grid-cols-4 gap-1.5">
               <SummaryChip label={text('正常', 'Online')} value={counts.online} tone="green" />
@@ -423,7 +442,7 @@ export function Sidebar({ systemStatus, open, onClose }: SidebarProps) {
               <SummaryChip label={text('关闭', 'Off')} value={counts.disabled} tone="muted" />
             </div>
           </div>
-          <div className="space-y-2 max-h-[28vh] overflow-y-auto pr-1">
+          <div className={`${indicatorsOpen ? 'block' : 'hidden'} space-y-2 max-h-[28vh] overflow-y-auto pr-1`}>
             {systemStatus ? (
               <>
                 <IndicatorGroup title={text('系统状态', 'System status')} items={systemIndicators} defaultOpen />
