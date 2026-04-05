@@ -23,6 +23,49 @@ export interface ReconnectResult {
   message?: string
 }
 
+export type IndicatorStatus = 'online' | 'warning' | 'offline' | 'disabled'
+
+export interface RuntimeConnectorStatus {
+  running: boolean
+  port?: number
+}
+
+export interface RuntimeNewsFeedStatus {
+  name: string
+  url: string
+  source: string
+  lastFetchAt?: number
+  lastSuccessAt?: number
+  lastFailureAt?: number
+  lastError?: string
+  lastFetchedCount: number
+  lastNewCount: number
+}
+
+export interface RuntimeNewsCollectorStatus {
+  running: boolean
+  intervalMs: number
+  lastRunAt?: number
+  lastSuccessAt?: number
+  lastFailureAt?: number
+  lastError?: string
+  lastTotalItems: number
+  lastTotalNew: number
+  feeds: RuntimeNewsFeedStatus[]
+}
+
+export interface EngineRuntimeStatus {
+  connectors: {
+    web: RuntimeConnectorStatus
+    mcp: RuntimeConnectorStatus
+    mcpAsk: RuntimeConnectorStatus
+    telegram: RuntimeConnectorStatus
+    openbbServer: RuntimeConnectorStatus
+  }
+  connectorsReconnecting: boolean
+  news: RuntimeNewsCollectorStatus | null
+}
+
 export interface EngineContext {
   config: Config
   connectorCenter: ConnectorCenter
@@ -38,6 +81,8 @@ export interface EngineContext {
   snapshotService?: SnapshotService
   /** Reconnect connector plugins (Telegram, MCP-Ask, etc.). */
   reconnectConnectors: () => Promise<ReconnectResult>
+  /** Current runtime status snapshot for plugins and background services. */
+  getRuntimeStatus: () => EngineRuntimeStatus
 }
 
 /** A media attachment collected from tool results (e.g. browser screenshots). */

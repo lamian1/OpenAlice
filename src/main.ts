@@ -275,6 +275,17 @@ async function main() {
 
   // Optional plugins — toggleable at runtime via reconnectConnectors()
   const optionalPlugins = new Map<string, Plugin>()
+  const getRuntimeStatus = () => ({
+    connectors: {
+      web: { running: !!config.connectors.web.port, port: config.connectors.web.port },
+      mcp: { running: !!config.connectors.mcp.port, port: config.connectors.mcp.port },
+      mcpAsk: { running: optionalPlugins.has('mcp-ask'), port: config.connectors.mcpAsk.port },
+      telegram: { running: optionalPlugins.has('telegram') },
+      openbbServer: { running: optionalPlugins.has('openbb-server'), port: config.marketData.apiServer.port },
+    },
+    connectorsReconnecting,
+    news: newsCollector?.status() ?? null,
+  })
 
   if (config.connectors.mcpAsk.enabled && config.connectors.mcpAsk.port) {
     optionalPlugins.set('mcp-ask', new McpAskPlugin({ port: config.connectors.mcpAsk.port }))
@@ -375,6 +386,7 @@ async function main() {
     config, connectorCenter, agentCenter, eventLog, toolCallLog, heartbeat, cronEngine, toolCenter,
     accountManager, snapshotService,
     reconnectConnectors,
+    getRuntimeStatus,
   }
 
   for (const plugin of [...corePlugins, ...optionalPlugins.values()]) {

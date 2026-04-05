@@ -13,6 +13,7 @@ import { devApi } from './dev'
 import { toolsApi } from './tools'
 import { channelsApi } from './channels'
 import { agentStatusApi } from './agentStatus'
+import { systemStatusApi } from './systemStatus'
 export const api = {
   chat: chatApi,
   config: configApi,
@@ -25,6 +26,7 @@ export const api = {
   tools: toolsApi,
   channels: channelsApi,
   agentStatus: agentStatusApi,
+  systemStatus: systemStatusApi,
 }
 
 // Re-export all types for convenience
@@ -54,6 +56,8 @@ export type {
   LoginMethod,
   UTASnapshotSummary,
   EquityCurvePoint,
+  SystemStatusResponse,
+  StatusIndicatorItem,
 } from './types'
 export type { EventQueryResult } from './events'
 export type { ToolCallQueryResult } from './agentStatus'

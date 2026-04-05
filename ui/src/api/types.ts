@@ -322,6 +322,30 @@ export interface TestConnectionResult {
   account?: unknown
 }
 
+export type IndicatorStatus = 'online' | 'warning' | 'offline' | 'disabled'
+
+export interface StatusIndicatorItem {
+  id: string
+  label: string
+  status: IndicatorStatus
+  detail: string
+  meta?: Record<string, unknown>
+}
+
+export interface SystemStatusResponse {
+  aiProvider: StatusIndicatorItem
+  marketData: StatusIndicatorItem
+  tradingAccounts: StatusIndicatorItem[]
+  connectors: StatusIndicatorItem[]
+  heartbeat: StatusIndicatorItem
+  news: StatusIndicatorItem
+  newsFeeds: StatusIndicatorItem[]
+  meta: {
+    connectorsReconnecting: boolean
+    webPort: number
+  }
+}
+
 // ==================== Snapshots ====================
 
 export interface UTASnapshotSummary {

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { Sidebar } from './components/Sidebar'
 import { ChatPage } from './pages/ChatPage'
@@ -15,6 +15,7 @@ import { HeartbeatPage } from './pages/HeartbeatPage'
 import { ToolsPage } from './pages/ToolsPage'
 import { AgentStatusPage } from './pages/AgentStatusPage'
 import { useI18n } from './i18n'
+import { api, type SystemStatusResponse } from './api'
 
 export type Page =
   | 'chat' | 'portfolio' | 'events' | 'agent-status' | 'heartbeat' | 'market-data' | 'news' | 'connectors'
@@ -40,14 +41,34 @@ export const ROUTES: Record<Page, string> = {
 
 export function App() {
   const { text } = useI18n()
-  const [sseConnected, setSseConnected] = useState(false)
+  const [systemStatus, setSystemStatus] = useState<SystemStatusResponse | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const location = useLocation()
+
+  useEffect(() => {
+    let disposed = false
+
+    const load = async () => {
+      try {
+        const next = await api.systemStatus.load()
+        if (!disposed) setSystemStatus(next)
+      } catch {
+        if (!disposed) setSystemStatus(null)
+      }
+    }
+
+    load()
+    const timer = setInterval(load, 15000)
+    return () => {
+      disposed = true
+      clearInterval(timer)
+    }
+  }, [])
 
   return (
     <div className="flex h-full">
       <Sidebar
-        sseConnected={sseConnected}
+        systemStatus={systemStatus}
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
@@ -67,7 +88,7 @@ export function App() {
         </div>
         <div key={location.pathname} className="page-fade-in flex-1 flex flex-col min-h-0">
           <Routes>
-            <Route path="/" element={<ChatPage onSSEStatus={setSseConnected} />} />
+            <Route path="/" element={<ChatPage />} />
             <Route path="/portfolio" element={<PortfolioPage />} />
             <Route path="/events" element={<EventsPage />} />
             <Route path="/agent-status" element={<AgentStatusPage />} />

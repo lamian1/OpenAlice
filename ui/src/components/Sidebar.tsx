@@ -1,12 +1,131 @@
-import { type ReactNode } from 'react'
+import { type ReactNode, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { type Page, ROUTES } from '../App'
 import { useI18n } from '../i18n'
+import type { StatusIndicatorItem, SystemStatusResponse } from '../api'
 
 interface SidebarProps {
-  sseConnected: boolean
+  systemStatus: SystemStatusResponse | null
   open: boolean
   onClose: () => void
+}
+
+function dotClass(status: StatusIndicatorItem['status']): string {
+  switch (status) {
+    case 'online':
+      return 'bg-green'
+    case 'warning':
+      return 'bg-yellow-400'
+    case 'offline':
+      return 'bg-red'
+    case 'disabled':
+      return 'bg-text-muted/40'
+  }
+}
+
+function statusPriority(status: StatusIndicatorItem['status']): number {
+  switch (status) {
+    case 'offline':
+      return 0
+    case 'warning':
+      return 1
+    case 'online':
+      return 2
+    case 'disabled':
+      return 3
+  }
+}
+
+function statusText(status: StatusIndicatorItem['status'], text: (zh: string, en: string) => string): string {
+  switch (status) {
+    case 'online':
+      return text('正常', 'Online')
+    case 'warning':
+      return text('告警', 'Warning')
+    case 'offline':
+      return text('离线', 'Offline')
+    case 'disabled':
+      return text('关闭', 'Disabled')
+  }
+}
+
+function IndicatorRow({ item, compact = false }: { item: StatusIndicatorItem; compact?: boolean }) {
+  const { text } = useI18n()
+  return (
+    <div className={`flex items-start gap-2 ${compact ? 'py-0.5' : ''}`}>
+      <span className={`mt-1.5 shrink-0 w-2 h-2 rounded-full ${dotClass(item.status)}`} />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[12px] text-text truncate">{item.label}</span>
+          <span className="text-[10px] text-text-muted/70 shrink-0">{statusText(item.status, text)}</span>
+        </div>
+        {!compact && <p className="text-[11px] leading-snug text-text-muted truncate">{item.detail}</p>}
+      </div>
+    </div>
+  )
+}
+
+function SummaryChip({ label, value, tone }: { label: string; value: number; tone: 'green' | 'yellow' | 'red' | 'muted' }) {
+  const toneClass = tone === 'green'
+    ? 'border-green/25 text-green bg-green/8'
+    : tone === 'yellow'
+      ? 'border-yellow-400/25 text-yellow-400 bg-yellow-400/8'
+      : tone === 'red'
+        ? 'border-red/25 text-red bg-red/8'
+        : 'border-border text-text-muted bg-bg'
+
+  return (
+    <div className={`rounded-md border px-2 py-1 ${toneClass}`}>
+      <div className="text-[9px] uppercase tracking-wider opacity-80">{label}</div>
+      <div className="text-[12px] font-semibold leading-none mt-1">{value}</div>
+    </div>
+  )
+}
+
+function IndicatorGroup({ title, items, defaultOpen = false }: { title: string; items: StatusIndicatorItem[]; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen)
+  const { text } = useI18n()
+  const sorted = useMemo(() => [...items].sort((a, b) => statusPriority(a.status) - statusPriority(b.status) || a.label.localeCompare(b.label)), [items])
+  const offlineCount = sorted.filter((item) => item.status === 'offline').length
+  const warningCount = sorted.filter((item) => item.status === 'warning').length
+  const onlineCount = sorted.filter((item) => item.status === 'online').length
+
+  return (
+    <div className="rounded-lg border border-border/70 bg-bg/60 overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        className="w-full px-2.5 py-2 text-left hover:bg-bg-tertiary/35 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 12 12"
+            fill="none"
+            className={`shrink-0 transition-transform ${open ? 'rotate-90' : ''}`}
+          >
+            <path d="M4 2.5L8 6L4 9.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[11px] font-medium text-text-muted/80 uppercase tracking-wider truncate">{title}</p>
+              <span className="text-[10px] text-text-muted/60 shrink-0">{sorted.length}</span>
+            </div>
+            <div className="mt-1 flex items-center gap-1.5 text-[10px] text-text-muted/70">
+              <span>{text(`${onlineCount} 正常`, `${onlineCount} online`)}</span>
+              {(warningCount > 0 || offlineCount > 0) && <span>·</span>}
+              {warningCount > 0 && <span className="text-yellow-400">{text(`${warningCount} 告警`, `${warningCount} warning`)}</span>}
+              {offlineCount > 0 && <span className="text-red">{text(`${offlineCount} 离线`, `${offlineCount} offline`)}</span>}
+            </div>
+          </div>
+        </div>
+      </button>
+      <div className={`${open ? 'block' : 'hidden'} border-t border-border/60 px-2.5 py-2 space-y-2`}>
+        {sorted.map((item) => <IndicatorRow key={item.id} item={item} compact={sorted.length > 4} />)}
+      </div>
+    </div>
+  )
 }
 
 // ==================== Nav item definitions ====================
@@ -197,10 +316,27 @@ const INDICATOR_STYLE = { background: '#58a6ff' }
 
 // ==================== Sidebar ====================
 
-export function Sidebar({ sseConnected, open, onClose }: SidebarProps) {
+export function Sidebar({ systemStatus, open, onClose }: SidebarProps) {
   const { locale, setLocale, text } = useI18n()
   const location = useLocation()
   const currentPage = pathToPage(location.pathname)
+  const systemIndicators = systemStatus
+    ? [systemStatus.aiProvider, systemStatus.marketData, systemStatus.heartbeat, systemStatus.news]
+    : []
+  const connectorIndicators = systemStatus?.connectors ?? []
+  const tradingIndicators = systemStatus?.tradingAccounts ?? []
+  const newsFeedIndicators = systemStatus?.newsFeeds ?? []
+  const counts = useMemo(() => {
+    const all = systemStatus
+      ? [...systemIndicators, ...connectorIndicators, ...tradingIndicators, ...newsFeedIndicators]
+      : []
+    return {
+      online: all.filter((item) => item.status === 'online').length,
+      warning: all.filter((item) => item.status === 'warning').length,
+      offline: all.filter((item) => item.status === 'offline').length,
+      disabled: all.filter((item) => item.status === 'disabled').length,
+    }
+  }, [systemStatus, systemIndicators, connectorIndicators, tradingIndicators, newsFeedIndicators])
 
   return (
     <>
@@ -271,20 +407,37 @@ export function Sidebar({ sseConnected, open, onClose }: SidebarProps) {
           ))}
         </nav>
 
-        {/* SSE Connection Status */}
         <div className="mt-auto px-4 py-3 border-t border-border space-y-3">
-          <div className="flex items-center gap-2 text-[12px] text-text-muted">
-            <span className="relative flex h-2 w-2">
-              {sseConnected ? (
-                <span className="w-2 h-2 rounded-full bg-green" />
-              ) : (
-                <>
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red/60" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-red" />
-                </>
-              )}
-            </span>
-            <span>{text(sseConnected ? '已连接' : '重连中...', sseConnected ? 'Connected' : 'Reconnecting...')}</span>
+          <div className="rounded-xl border border-border bg-bg/70 px-3 py-2.5 space-y-2.5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-medium text-text-muted/60 uppercase tracking-wider">{text('运行状态', 'Runtime status')}</p>
+                <p className="text-[12px] text-text-muted mt-1">{systemStatus?.meta.connectorsReconnecting ? text('连接器正在重载', 'Connectors reloading') : text('按分组查看状态灯', 'Grouped health indicators')}</p>
+              </div>
+              {systemStatus?.meta.connectorsReconnecting && <span className="text-[10px] text-yellow-400 shrink-0">{text('重载中', 'Reloading')}</span>}
+            </div>
+            <div className="grid grid-cols-4 gap-1.5">
+              <SummaryChip label={text('正常', 'Online')} value={counts.online} tone="green" />
+              <SummaryChip label={text('告警', 'Warn')} value={counts.warning} tone="yellow" />
+              <SummaryChip label={text('离线', 'Off')} value={counts.offline} tone="red" />
+              <SummaryChip label={text('关闭', 'Off')} value={counts.disabled} tone="muted" />
+            </div>
+          </div>
+          <div className="space-y-2 max-h-[28vh] overflow-y-auto pr-1">
+            {systemStatus ? (
+              <>
+                <IndicatorGroup title={text('系统状态', 'System status')} items={systemIndicators} defaultOpen />
+                <IndicatorGroup title={text('连接器', 'Connectors')} items={connectorIndicators} defaultOpen={connectorIndicators.some((item) => item.status !== 'online' && item.status !== 'disabled')} />
+                <IndicatorGroup title={text('News 源', 'News feeds')} items={newsFeedIndicators.length > 0 ? newsFeedIndicators : [systemStatus.news]} defaultOpen={newsFeedIndicators.some((item) => item.status !== 'online' && item.status !== 'disabled')} />
+                <IndicatorGroup
+                  title={text('交易账户', 'Trading accounts')}
+                  defaultOpen={tradingIndicators.some((item) => item.status !== 'online' && item.status !== 'disabled')}
+                  items={tradingIndicators.length > 0 ? tradingIndicators : [{ id: 'no-accounts', label: text('交易账户', 'Trading accounts'), status: 'disabled', detail: text('尚未配置任何账户', 'No accounts configured') }]}
+                />
+              </>
+            ) : (
+              <div className="text-[12px] text-text-muted rounded-lg border border-border bg-bg/60 px-3 py-2">{text('状态加载中…', 'Loading status...')}</div>
+            )}
           </div>
           <div className="space-y-1.5">
             <p className="text-[11px] font-medium text-text-muted/60 uppercase tracking-wider">
