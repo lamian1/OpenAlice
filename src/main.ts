@@ -38,6 +38,7 @@ import { createCronEngine, createCronListener, createCronTools } from './task/cr
 import { createHeartbeat } from './task/heartbeat/index.js'
 import { NewsCollectorStore, NewsCollector } from './domain/news/index.js'
 import { createNewsArchiveTools } from './tool/news.js'
+import { createSystemTools } from './tool/system.js'
 
 // ==================== Persistence paths ====================
 
@@ -191,6 +192,7 @@ async function main() {
     toolCenter.register(createNewsArchiveTools(newsStore), 'news')
   }
   toolCenter.register(createAnalysisTools(equityClient, cryptoClient, currencyClient), 'analysis')
+  toolCenter.register(createSystemTools(() => ctx), 'system')
 
   console.log(`tool-center: ${toolCenter.list().length} tools registered`)
 
@@ -305,12 +307,13 @@ async function main() {
   // ==================== Connector Reconnect ====================
 
   let connectorsReconnecting = false
-  const reconnectConnectors = async (): Promise<ReconnectResult> => {
+  const reconnectConnectors = async (opts?: { restart?: Array<'telegram' | 'mcp-ask' | 'openbb-server'> }): Promise<ReconnectResult> => {
     if (connectorsReconnecting) return { success: false, error: 'Reconnect already in progress' }
     connectorsReconnecting = true
     try {
       const fresh = await loadConfig()
       const changes: string[] = []
+      const restartSet = new Set(opts?.restart ?? [])
 
       // --- MCP Ask ---
       const mcpAskWanted = fresh.connectors.mcpAsk.enabled && !!fresh.connectors.mcpAsk.port
@@ -328,19 +331,28 @@ async function main() {
 
       // --- Telegram ---
       const telegramWanted = fresh.connectors.telegram.enabled && !!fresh.connectors.telegram.botToken
-      const telegramRunning = optionalPlugins.has('telegram')
+      let telegramRunning = optionalPlugins.has('telegram')
+      const telegramRestartRequested = restartSet.has('telegram')
       if (telegramRunning && !telegramWanted) {
         await optionalPlugins.get('telegram')!.stop()
         optionalPlugins.delete('telegram')
         changes.push('telegram stopped')
-      } else if (!telegramRunning && telegramWanted) {
+        telegramRunning = false
+      } else if (telegramRunning && telegramWanted && telegramRestartRequested) {
+        await optionalPlugins.get('telegram')!.stop()
+        optionalPlugins.delete('telegram')
+        changes.push('telegram stopped for restart')
+        telegramRunning = false
+      }
+
+      if (!telegramRunning && telegramWanted) {
         const p = new TelegramPlugin({
           token: fresh.connectors.telegram.botToken!,
           allowedChatIds: fresh.connectors.telegram.chatIds,
         })
         await p.start(ctx)
         optionalPlugins.set('telegram', p)
-        changes.push('telegram started')
+        changes.push(telegramRestartRequested ? 'telegram restarted' : 'telegram started')
       }
 
       // --- OpenBB API Server ---

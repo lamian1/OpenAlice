@@ -8,7 +8,7 @@
 import type { z } from 'zod'
 import type { IBroker, BrokerConfigField } from './types.js'
 import type { AccountConfig } from '../../../core/config.js'
-import { CcxtBroker } from './ccxt/CcxtBroker.js'
+import { CcxtBroker, CCXT_EXCHANGE_MODE_SUPPORT, type CcxtModeSupport } from './ccxt/CcxtBroker.js'
 import { AlpacaBroker } from './alpaca/AlpacaBroker.js'
 import { IbkrBroker } from './ibkr/IbkrBroker.js'
 
@@ -45,6 +45,8 @@ export interface BrokerRegistryEntry {
   subtitleFields: SubtitleField[]
   /** Guard category — determines which guard types are available */
   guardCategory: 'crypto' | 'securities'
+  /** Optional per-exchange CCXT env mode support metadata for frontend rendering. */
+  exchangeModeSupport?: Record<string, CcxtModeSupport>
 }
 
 // ==================== Registry ====================
@@ -64,6 +66,7 @@ export const BROKER_REGISTRY: Record<string, BrokerRegistryEntry> = {
       { field: 'sandbox', label: 'Sandbox' },
     ],
     guardCategory: 'crypto',
+    exchangeModeSupport: CCXT_EXCHANGE_MODE_SUPPORT,
   },
   alpaca: {
     configSchema: AlpacaBroker.configSchema,

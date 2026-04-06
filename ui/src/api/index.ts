@@ -14,6 +14,7 @@ import { toolsApi } from './tools'
 import { channelsApi } from './channels'
 import { agentStatusApi } from './agentStatus'
 import { systemStatusApi } from './systemStatus'
+import { connectorsDebugApi } from './connectorsDebug'
 export const api = {
   chat: chatApi,
   config: configApi,
@@ -27,6 +28,7 @@ export const api = {
   channels: channelsApi,
   agentStatus: agentStatusApi,
   systemStatus: systemStatusApi,
+  connectorsDebug: connectorsDebugApi,
 }
 
 // Re-export all types for convenience
@@ -58,6 +60,8 @@ export type {
   EquityCurvePoint,
   SystemStatusResponse,
   StatusIndicatorItem,
+  TelegramDebugStatus,
+  TelegramSendTestResult,
 } from './types'
 export type { EventQueryResult } from './events'
 export type { ToolCallQueryResult } from './agentStatus'

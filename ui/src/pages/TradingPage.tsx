@@ -12,6 +12,60 @@ import { api } from '../api'
 import type { AccountConfig, BrokerTypeInfo, BrokerConfigField, BrokerHealthInfo } from '../api/types'
 import { useI18n } from '../i18n'
 
+type CcxtModeSupport = {
+  sandbox: boolean
+  demoTrading: boolean
+}
+
+const DEFAULT_CCXT_MODE_SUPPORT: CcxtModeSupport = {
+  sandbox: false,
+  demoTrading: false,
+}
+
+function getCcxtModeSupport(brokerType: BrokerTypeInfo | undefined, exchange: unknown): CcxtModeSupport {
+  if (typeof exchange !== 'string') return DEFAULT_CCXT_MODE_SUPPORT
+  return brokerType?.exchangeModeSupport?.[exchange] ?? DEFAULT_CCXT_MODE_SUPPORT
+}
+
+function getVisibleBrokerFields(brokerType: BrokerTypeInfo | undefined, values: Record<string, unknown>): BrokerConfigField[] {
+  const fields = brokerType?.fields ?? []
+  if (brokerType?.type !== 'ccxt') return fields
+
+  const support = getCcxtModeSupport(brokerType, values.exchange)
+  return fields.filter((field) => {
+    if (field.name === 'sandbox') return support.sandbox
+    if (field.name === 'demoTrading') return support.demoTrading
+    return true
+  })
+}
+
+function sanitizeBrokerConfig(brokerType: BrokerTypeInfo | undefined, config: Record<string, unknown>): Record<string, unknown> {
+  if (brokerType?.type !== 'ccxt') return config
+
+  const support = getCcxtModeSupport(brokerType, config.exchange)
+  return {
+    ...config,
+    ...(!support.sandbox ? { sandbox: false } : {}),
+    ...(!support.demoTrading ? { demoTrading: false } : {}),
+  }
+}
+
+function applyBrokerConfigChange(
+  brokerType: BrokerTypeInfo | undefined,
+  previous: Record<string, unknown>,
+  field: string,
+  value: unknown,
+): Record<string, unknown> {
+  const next = { ...previous, [field]: value }
+
+  if (brokerType?.type === 'ccxt' && value === true) {
+    if (field === 'sandbox') next.demoTrading = false
+    if (field === 'demoTrading') next.sandbox = false
+  }
+
+  return sanitizeBrokerConfig(brokerType, next)
+}
+
 // ==================== Dialog state ====================
 
 type DialogState =
@@ -368,10 +422,11 @@ function CreateWizard({ brokerTypes, existingAccountIds, onSave, onClose }: {
   const bt = brokerTypes.find(b => b.type === type)
   const hasSensitive = bt?.fields.some(f => f.sensitive) ?? false
   const totalSteps = hasSensitive ? 2 : 1
+  const visibleFields = getVisibleBrokerFields(bt, brokerConfig)
 
   // Split fields into connection (non-sensitive) and credential (sensitive)
-  const connectionFields = bt?.fields.filter(f => !f.sensitive) ?? []
-  const credentialFields = bt?.fields.filter(f => f.sensitive) ?? []
+  const connectionFields = visibleFields.filter(f => !f.sensitive)
+  const credentialFields = visibleFields.filter(f => f.sensitive)
 
   // Initialize defaults when type changes
   useEffect(() => {
@@ -380,7 +435,7 @@ function CreateWizard({ brokerTypes, existingAccountIds, onSave, onClose }: {
     for (const f of bt.fields) {
       if (f.default !== undefined) defaults[f.name] = f.default
     }
-    setBrokerConfig(defaults)
+    setBrokerConfig(sanitizeBrokerConfig(bt, defaults))
   }, [type])
 
   const defaultId = type ? `${type}-main` : ''
@@ -394,12 +449,29 @@ function CreateWizard({ brokerTypes, existingAccountIds, onSave, onClose }: {
     badgeColor: b.badgeColor,
   }))
 
+  const getMissingRequiredFields = (fields: BrokerConfigField[]) => {
+    return fields.filter((field) => {
+      if (!field.required) return false
+      const value = brokerConfig[field.name]
+      if (typeof value === 'boolean') return false
+      return String(value ?? '').trim() === ''
+    })
+  }
+
   const handleNext = () => {
     if (!type) return
     if (existingAccountIds.includes(finalId)) {
       setError(text(`账户“${finalId}”已存在`, `Account "${finalId}" already exists`))
       return
     }
+
+    const missingConnectionFields = getMissingRequiredFields(connectionFields)
+    if (missingConnectionFields.length > 0) {
+      const labels = missingConnectionFields.map((field) => field.label).join(' / ')
+      setError(text(`请先填写：${labels}`, `Please fill in: ${labels}`))
+      return
+    }
+
     setError('')
     if (hasSensitive) {
       setStep(2)
@@ -411,7 +483,15 @@ function CreateWizard({ brokerTypes, existingAccountIds, onSave, onClose }: {
   const handleCreate = async () => {
     setSaving(true); setError('')
     try {
-      const account: AccountConfig = { id: finalId, type: type!, enabled: true, guards: [], brokerConfig }
+      const missingFields = getMissingRequiredFields(bt?.fields ?? [])
+      if (missingFields.length > 0) {
+        const labels = missingFields.map((field) => field.label).join(' / ')
+        setError(text(`请先填写：${labels}`, `Please fill in: ${labels}`))
+        setSaving(false)
+        return
+      }
+
+      const account: AccountConfig = { id: finalId, type: type!, enabled: true, guards: [], brokerConfig: sanitizeBrokerConfig(bt, brokerConfig) }
 
       const testResult = await api.trading.testConnection(account)
       if (!testResult.success) {
@@ -430,6 +510,8 @@ function CreateWizard({ brokerTypes, existingAccountIds, onSave, onClose }: {
   const canCreate = hasSensitive
     ? credentialFields.filter(f => f.required).every(f => String(brokerConfig[f.name] ?? '').trim())
     : true
+
+  const canProceedToCredentials = Boolean(type) && getMissingRequiredFields(connectionFields).length === 0
 
   return (
     <Dialog onClose={onClose}>
@@ -465,7 +547,7 @@ function CreateWizard({ brokerTypes, existingAccountIds, onSave, onClose }: {
                   fields={connectionFields}
                   values={brokerConfig}
                   showSecrets={false}
-                  onChange={(f, v) => setBrokerConfig(prev => ({ ...prev, [f]: v }))}
+                  onChange={(f, v) => setBrokerConfig(prev => applyBrokerConfigChange(bt, prev, f, v))}
                 />
               </div>
             )}
@@ -487,7 +569,7 @@ function CreateWizard({ brokerTypes, existingAccountIds, onSave, onClose }: {
               fields={credentialFields}
               values={brokerConfig}
               showSecrets={false}
-              onChange={(f, v) => setBrokerConfig(prev => ({ ...prev, [f]: v }))}
+              onChange={(f, v) => setBrokerConfig(prev => applyBrokerConfigChange(bt, prev, f, v))}
             />
             {error && <p className="text-[12px] text-red">{error}</p>}
           </div>
@@ -505,7 +587,7 @@ function CreateWizard({ brokerTypes, existingAccountIds, onSave, onClose }: {
           </button>
         )}
         {step === 1 && (hasSensitive || !type) && (
-          <button onClick={handleNext} disabled={!type} className="btn-primary">
+          <button onClick={handleNext} disabled={!type || (hasSensitive && !canProceedToCredentials)} className="btn-primary">
             {text('下一步', 'Next')}
           </button>
         )}
@@ -536,12 +618,20 @@ function EditDialog({ account, brokerType, health, onSaveAccount, onDelete, onCl
   const [guardsOpen, setGuardsOpen] = useState(false)
   const [showKeys, setShowKeys] = useState(false)
 
-  useEffect(() => { setDraft(account) }, [account])
+  useEffect(() => {
+    setDraft((prev) => ({
+      ...account,
+      brokerConfig: sanitizeBrokerConfig(brokerType, account.brokerConfig),
+    }))
+  }, [account, brokerType])
 
   const dirty = JSON.stringify(draft) !== JSON.stringify(account)
 
   const patchBrokerConfig = (field: string, value: unknown) => {
-    setDraft(d => ({ ...d, brokerConfig: { ...d.brokerConfig, [field]: value } }))
+    setDraft(d => ({
+      ...d,
+      brokerConfig: applyBrokerConfigChange(brokerType, d.brokerConfig, field, value),
+    }))
   }
 
   const patchGuards = (guards: AccountConfig['guards']) => {
@@ -551,7 +641,7 @@ function EditDialog({ account, brokerType, health, onSaveAccount, onDelete, onCl
   const handleSave = async () => {
     setSaving(true); setMsg('')
     try {
-      await onSaveAccount(draft)
+      await onSaveAccount({ ...draft, brokerConfig: sanitizeBrokerConfig(brokerType, draft.brokerConfig) })
       setMsg(text('已保存', 'Saved'))
       setTimeout(() => setMsg(''), 2000)
     } catch (err) {
@@ -561,7 +651,7 @@ function EditDialog({ account, brokerType, health, onSaveAccount, onDelete, onCl
     }
   }
 
-  const fields = brokerType?.fields ?? []
+  const fields = getVisibleBrokerFields(brokerType, draft.brokerConfig)
   const hasSensitive = fields.some(f => f.sensitive)
   const guardTypes = (brokerType?.guardCategory === 'crypto') ? CRYPTO_GUARD_TYPES : SECURITIES_GUARD_TYPES
 

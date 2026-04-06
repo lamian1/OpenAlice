@@ -50,8 +50,69 @@ function ibkrOrderTypeToCcxt(orderType: string): string {
   }
 }
 
+function defaultFetchMarketTypes(exchange: string): string[] {
+  switch (exchange) {
+    case 'okx':
+      return ['spot', 'swap', 'future']
+    default:
+      return ['spot', 'linear', 'inverse']
+  }
+}
+
+function shouldRetryFetchMarkets(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err)
+  return !/Parameter instType error|Invalid instType|51000/i.test(msg)
+}
+
 export interface CcxtBrokerMeta {
   exchange: string  // "bybit", "binance", "okx", etc.
+}
+
+export interface CcxtModeSupport {
+  sandbox: boolean
+  demoTrading: boolean
+}
+
+export const DEFAULT_CCXT_MODE_SUPPORT: CcxtModeSupport = {
+  sandbox: false,
+  demoTrading: false,
+}
+
+export const CCXT_EXCHANGE_MODE_SUPPORT: Record<string, CcxtModeSupport> = {
+  binance: { sandbox: true, demoTrading: true },
+  bybit: { sandbox: true, demoTrading: true },
+  okx: { sandbox: true, demoTrading: false },
+  bitget: { sandbox: true, demoTrading: true },
+  gate: { sandbox: true, demoTrading: false },
+  kucoin: { sandbox: false, demoTrading: false },
+  coinbase: { sandbox: false, demoTrading: false },
+  kraken: { sandbox: false, demoTrading: false },
+  htx: { sandbox: true, demoTrading: false },
+  mexc: { sandbox: false, demoTrading: false },
+  bingx: { sandbox: true, demoTrading: false },
+  phemex: { sandbox: true, demoTrading: false },
+  woo: { sandbox: true, demoTrading: false },
+  hyperliquid: { sandbox: true, demoTrading: false },
+}
+
+export function getCcxtModeSupport(exchange: string): CcxtModeSupport {
+  return CCXT_EXCHANGE_MODE_SUPPORT[exchange] ?? DEFAULT_CCXT_MODE_SUPPORT
+}
+
+export function validateCcxtModeConfig(config: Pick<CcxtBrokerConfig, 'exchange' | 'sandbox' | 'demoTrading'>): void {
+  const support = getCcxtModeSupport(config.exchange)
+
+  if (config.sandbox && !support.sandbox) {
+    throw new BrokerError('CONFIG', `${config.exchange} does not support sandbox mode`)
+  }
+
+  if (config.demoTrading && !support.demoTrading) {
+    throw new BrokerError('CONFIG', `${config.exchange} does not support demo trading`)
+  }
+
+  if (config.sandbox && config.demoTrading) {
+    throw new BrokerError('CONFIG', `${config.exchange} cannot enable sandbox mode and demo trading at the same time`)
+  }
 }
 
 export class CcxtBroker implements IBroker<CcxtBrokerMeta> {
@@ -76,11 +137,16 @@ export class CcxtBroker implements IBroker<CcxtBrokerMeta> {
     { name: 'demoTrading', type: 'boolean', label: 'Demo Trading', default: false },
     { name: 'apiKey', type: 'password', label: 'API Key', required: true, sensitive: true },
     { name: 'apiSecret', type: 'password', label: 'API Secret', required: true, sensitive: true },
-    { name: 'password', type: 'password', label: 'Password', placeholder: 'Required by some exchanges (e.g. OKX)', sensitive: true },
+    { name: 'password', type: 'password', label: 'Passphrase / Password', placeholder: 'OKX/KuCoin fill API passphrase here; this is not your login password', sensitive: true },
   ]
 
   static fromConfig(config: { id: string; label?: string; brokerConfig: Record<string, unknown> }): CcxtBroker {
     const bc = CcxtBroker.configSchema.parse(config.brokerConfig)
+    validateCcxtModeConfig({
+      exchange: bc.exchange,
+      sandbox: bc.sandbox,
+      demoTrading: bc.demoTrading,
+    })
     return new CcxtBroker({
       id: config.id,
       label: config.label,
@@ -108,6 +174,7 @@ export class CcxtBroker implements IBroker<CcxtBrokerMeta> {
   private orderSymbolCache = new Map<string, string>()
 
   constructor(config: CcxtBrokerConfig) {
+    validateCcxtModeConfig(config)
     this.exchangeName = config.exchange
     this.meta = { exchange: config.exchange }
     this.overrides = exchangeOverrides[config.exchange] ?? {}
@@ -122,14 +189,19 @@ export class CcxtBroker implements IBroker<CcxtBrokerMeta> {
 
     // Default: skip option markets to reduce concurrent requests during loadMarkets
     const defaultOptions: Record<string, unknown> = {
-      fetchMarkets: { types: ['spot', 'linear', 'inverse'] },
+      fetchMarkets: { types: defaultFetchMarketTypes(config.exchange) },
     }
     const mergedOptions = { ...defaultOptions, ...config.options }
+
+    const httpsProxy = process.env.HTTPS_PROXY || process.env.https_proxy || process.env.HTTP_PROXY || process.env.http_proxy || undefined
+    const socksProxy = process.env.ALL_PROXY || process.env.all_proxy || undefined
 
     this.exchange = new ExchangeClass({
       apiKey: config.apiKey,
       secret: config.apiSecret,
       password: config.password,
+      ...(httpsProxy ? { httpsProxy } : {}),
+      ...(socksProxy && socksProxy.startsWith('socks') ? { socksProxy } : {}),
       options: mergedOptions,
     })
 
@@ -171,7 +243,7 @@ export class CcxtBroker implements IBroker<CcxtBrokerMeta> {
       const ex = this.exchange as unknown as Record<string, unknown>
       const opts = (ex['options'] ?? {}) as Record<string, unknown>
       const fmOpts = (opts['fetchMarkets'] ?? {}) as Record<string, unknown>
-      const types = (fmOpts['types'] ?? ['spot', 'linear', 'inverse']) as string[]
+      const types = (fmOpts['types'] ?? defaultFetchMarketTypes(this.exchangeName)) as string[]
 
       const allMarkets: unknown[] = []
       for (const type of types) {
@@ -185,7 +257,7 @@ export class CcxtBroker implements IBroker<CcxtBrokerMeta> {
             break
           } catch (err) {
             const msg = err instanceof Error ? err.message : String(err)
-            if (attempt < MAX_INIT_RETRIES) {
+            if (attempt < MAX_INIT_RETRIES && shouldRetryFetchMarkets(err)) {
               const delay = INIT_RETRY_BASE_MS * Math.pow(2, attempt - 1)
               console.warn(`CcxtBroker[${accountId}]: fetchMarkets(${type}) attempt ${attempt}/${MAX_INIT_RETRIES} failed, retrying in ${delay}ms...`)
               await new Promise(r => setTimeout(r, delay))

@@ -6,6 +6,8 @@ import {
 } from '../../../core/config.js'
 import { createBroker } from '../../../domain/trading/brokers/factory.js'
 import { BROKER_REGISTRY } from '../../../domain/trading/brokers/registry.js'
+import { validateCcxtModeConfig } from '../../../domain/trading/brokers/ccxt/CcxtBroker.js'
+import { BrokerError } from '../../../domain/trading/brokers/types.js'
 
 // ==================== Credential helpers ====================
 
@@ -51,6 +53,15 @@ function unmaskSecrets(
 export function createTradingConfigRoutes(ctx: EngineContext) {
   const app = new Hono()
 
+  const validateBrokerAccountConfig = (account: { type: string; brokerConfig: Record<string, unknown> }) => {
+    if (account.type !== 'ccxt') return
+    validateCcxtModeConfig({
+      exchange: String(account.brokerConfig.exchange ?? ''),
+      sandbox: Boolean(account.brokerConfig.sandbox),
+      demoTrading: Boolean(account.brokerConfig.demoTrading),
+    })
+  }
+
   // ==================== Broker types (for dynamic UI rendering) ====================
 
   app.get('/broker-types', (c) => {
@@ -63,6 +74,7 @@ export function createTradingConfigRoutes(ctx: EngineContext) {
       fields: entry.configFields,
       subtitleFields: entry.subtitleFields,
       guardCategory: entry.guardCategory,
+      exchangeModeSupport: entry.exchangeModeSupport,
     }))
     return c.json({ brokerTypes })
   })
@@ -97,6 +109,7 @@ export function createTradingConfigRoutes(ctx: EngineContext) {
       }
 
       const validated = accountConfigSchema.parse(body)
+  validateBrokerAccountConfig(validated)
 
       const idx = accounts.findIndex((a) => a.id === id)
       if (idx >= 0) {
@@ -121,6 +134,9 @@ export function createTradingConfigRoutes(ctx: EngineContext) {
     } catch (err) {
       if (err instanceof Error && err.name === 'ZodError') {
         return c.json({ error: 'Validation failed', details: JSON.parse(err.message) }, 400)
+      }
+      if (err instanceof BrokerError && err.code === 'CONFIG') {
+        return c.json({ error: err.message }, 400)
       }
       return c.json({ error: String(err) }, 500)
     }
@@ -150,6 +166,7 @@ export function createTradingConfigRoutes(ctx: EngineContext) {
     try {
       const body = await c.req.json()
       const accountConfig = accountConfigSchema.parse({ ...body, id: body.id ?? '__test__' })
+      validateBrokerAccountConfig(accountConfig)
 
       broker = createBroker(accountConfig)
       await broker.init()

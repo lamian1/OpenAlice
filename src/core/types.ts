@@ -80,7 +80,7 @@ export interface EngineContext {
   accountManager: AccountManager
   snapshotService?: SnapshotService
   /** Reconnect connector plugins (Telegram, MCP-Ask, etc.). */
-  reconnectConnectors: () => Promise<ReconnectResult>
+  reconnectConnectors: (opts?: { restart?: Array<'telegram' | 'mcp-ask' | 'openbb-server'> }) => Promise<ReconnectResult>
   /** Current runtime status snapshot for plugins and background services. */
   getRuntimeStatus: () => EngineRuntimeStatus
 }

@@ -309,6 +309,7 @@ export interface BrokerTypeInfo {
   fields: BrokerConfigField[]
   subtitleFields: SubtitleField[]
   guardCategory: 'crypto' | 'securities'
+  exchangeModeSupport?: Record<string, { sandbox: boolean; demoTrading: boolean }>
 }
 
 export interface GuardEntry {
@@ -344,6 +345,29 @@ export interface SystemStatusResponse {
     connectorsReconnecting: boolean
     webPort: number
   }
+}
+
+export interface TelegramDebugStatus {
+  enabled: boolean
+  configured: boolean
+  runtimeRunning: boolean
+  status: IndicatorStatus
+  detail: string
+  botUsername?: string
+  allowedChatIds?: number[]
+  botApiOk?: boolean
+  botApiError?: string
+  webhookError?: string
+  bot: Record<string, unknown> | null
+  webhook: Record<string, unknown> | null
+  recentEvents: EventLogEntry[]
+  note?: string
+}
+
+export interface TelegramSendTestResult {
+  ok: boolean
+  error?: string
+  result?: Record<string, unknown> | null
 }
 
 // ==================== Snapshots ====================

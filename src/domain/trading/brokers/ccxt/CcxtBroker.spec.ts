@@ -37,6 +37,7 @@ vi.mock('ccxt', () => {
     default: {
       bybit: MockExchange,
       binance: MockExchange,
+      okx: MockExchange,
     },
   }
 })
@@ -1008,6 +1009,25 @@ describe('CcxtBroker — getQuote', () => {
     expect(quote.high).toBe(61000)
     expect(quote.low).toBe(59000)
     expect(quote.timestamp).toEqual(new Date(now))
+  })
+
+  it('resolves quotes from UTA aliceId for perpetual symbols', async () => {
+    const acc = makeAccount({ exchange: 'okx' })
+    const market = makeSwapMarket('BTC', 'USDT', 'BTC/USDT:USDT')
+    setInitialized(acc, { 'BTC/USDT:USDT': market })
+
+    ;(acc as any).exchange.fetchTicker = vi.fn().mockResolvedValue({
+      last: 60123.4, bid: 60120, ask: 60126, baseVolume: 999,
+      high: 60500, low: 59000, timestamp: Date.now(),
+    })
+
+    const contract = new Contract()
+    contract.aliceId = 'okx|BTC/USDT:USDT'
+
+    const quote = await acc.getQuote(contract)
+    expect(quote.last).toBe(60123.4)
+    expect((acc as any).exchange.fetchTicker).toHaveBeenCalledWith('BTC/USDT:USDT')
+    expect(quote.contract.localSymbol).toBe('BTC/USDT:USDT')
   })
 
   it('throws when contract cannot be resolved', async () => {

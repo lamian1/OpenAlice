@@ -19,6 +19,7 @@ import { createDevRoutes } from './routes/dev.js'
 import { createToolsRoutes } from './routes/tools.js'
 import { createAgentStatusRoutes } from './routes/agent-status.js'
 import { createSystemStatusRoutes } from './routes/system-status.js'
+import { createConnectorDebugRoutes } from './routes/connectors-debug.js'
 
 export interface WebConfig {
   port: number
@@ -85,6 +86,7 @@ export class WebPlugin implements Plugin {
     app.route('/api/tools', createToolsRoutes(ctx.toolCenter))
     app.route('/api/agent-status', createAgentStatusRoutes(ctx))
     app.route('/api/system-status', createSystemStatusRoutes(ctx))
+    app.route('/api/connectors/debug', createConnectorDebugRoutes(ctx))
 
     // ==================== Serve UI (Vite build output) ====================
     const uiRoot = resolve('dist/ui')

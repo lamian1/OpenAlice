@@ -5,6 +5,7 @@ import { promisify } from 'node:util'
 import { homedir } from 'node:os'
 import type { EngineContext, IndicatorStatus } from '../../../core/types.js'
 import { loadConfig, readAIProviderConfig, readMarketDataConfig } from '../../../core/config.js'
+import { getTelegramHealth } from '../../telegram/health.js'
 
 const execFileAsync = promisify(execFile)
 
@@ -178,8 +179,11 @@ export function createSystemStatusRoutes(ctx: EngineContext) {
     const config = await loadConfig()
     const runtime = ctx.getRuntimeStatus()
     const accounts = ctx.accountManager.listAccounts()
-    const aiProvider = await buildAiProviderIndicator()
-    const marketData = await buildMarketDataIndicator(runtime.connectors.openbbServer.port)
+    const [aiProvider, marketData, telegramHealth] = await Promise.all([
+      buildAiProviderIndicator(),
+      buildMarketDataIndicator(runtime.connectors.openbbServer.port),
+      getTelegramHealth(ctx, config),
+    ])
 
     const connectors: IndicatorItem[] = [
       {
@@ -205,14 +209,13 @@ export function createSystemStatusRoutes(ctx: EngineContext) {
       {
         id: 'telegram',
         label: 'Telegram',
-        status: config.connectors.telegram.enabled
-          ? runtime.connectors.telegram.running ? 'online' : 'warning'
-          : 'disabled',
-        detail: !config.connectors.telegram.enabled
-          ? 'Telegram 已关闭'
-          : runtime.connectors.telegram.running
-            ? 'Telegram 连接器已启动'
-            : 'Telegram 已配置但未连接',
+        status: telegramHealth.status,
+        detail: telegramHealth.detail,
+        meta: {
+          botApiOk: telegramHealth.botApiOk,
+          pendingUpdateCount: Number(telegramHealth.webhook?.pending_update_count ?? 0),
+          webhookUrl: String(telegramHealth.webhook?.url ?? ''),
+        },
       },
     ]
 

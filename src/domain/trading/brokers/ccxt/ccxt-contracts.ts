@@ -90,6 +90,16 @@ export function contractToCcxt(
   markets: Record<string, CcxtMarket>,
   exchangeName: string,
 ): string | null {
+  // 0. UTA aliceId format is "accountId|nativeKey" where nativeKey is the CCXT symbol.
+  // Recover it here so quote/orderbook/funding tools can round-trip searchContracts ids.
+  if (contract.aliceId) {
+    const sep = contract.aliceId.indexOf('|')
+    const nativeKey = sep >= 0 ? contract.aliceId.slice(sep + 1) : contract.aliceId
+    if (nativeKey && markets[nativeKey]) {
+      return nativeKey
+    }
+  }
+
   // 1. localSymbol is the CCXT unified symbol
   if (contract.localSymbol && markets[contract.localSymbol]) {
     return contract.localSymbol

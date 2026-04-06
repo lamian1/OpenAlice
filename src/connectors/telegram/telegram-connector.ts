@@ -9,9 +9,8 @@
  * to draining the stream and calling send() with the completed result.
  */
 
-import { readFile } from 'node:fs/promises'
-import { Bot, InputFile } from 'grammy'
 import type { Connector, ConnectorCapabilities, SendPayload, SendResult } from '../types.js'
+import { telegramCall, telegramSendPhoto } from './bot-api.js'
 
 export const MAX_MESSAGE_LENGTH = 4096
 
@@ -21,7 +20,7 @@ export class TelegramConnector implements Connector {
   readonly capabilities: ConnectorCapabilities = { push: true, media: true }
 
   constructor(
-    private readonly bot: Bot,
+    private readonly token: string,
     private readonly chatId: number,
   ) {
     this.to = String(chatId)
@@ -32,8 +31,7 @@ export class TelegramConnector implements Connector {
     if (payload.media && payload.media.length > 0) {
       for (const attachment of payload.media) {
         try {
-          const buf = await readFile(attachment.path)
-          await this.bot.api.sendPhoto(this.chatId, new InputFile(buf, 'screenshot.jpg'))
+          await telegramSendPhoto(this.token, this.chatId, attachment.path)
         } catch (err) {
           console.error('telegram: failed to send photo:', err)
         }
@@ -44,7 +42,7 @@ export class TelegramConnector implements Connector {
     if (payload.text) {
       const chunks = splitMessage(payload.text, MAX_MESSAGE_LENGTH)
       for (const chunk of chunks) {
-        await this.bot.api.sendMessage(this.chatId, chunk)
+        await telegramCall(this.token, 'sendMessage', { chat_id: this.chatId, text: chunk })
       }
     }
 
